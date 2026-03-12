@@ -1,0 +1,87 @@
+Document Translation Workflow Specification
+FOR CLAUDE CODE IMPLEMENTATION
+
+INSTRUCTIONS FOR CLAUDE CODE
+Before you begin coding:
+1. PLAN FIRST: Review this entire specification and create a development plan
+2. ASK CLARIFYING QUESTIONS: Identify any ambiguities or missing details and ask me about them before proceeding
+3. CHOOSE APPROPRIATE TECHNOLOGIES: You have full discretion to select the tech stack, frameworks, libraries, and tools that best fit this workflow
+
+PROJECT OVERVIEW
+This is a document translation service website that takes in documents, assesses formatting complexity, provides quotes, collects payment, and returns translated documents (to English). The workflow involves 11 distinct steps from intake to delivery.
+
+WORKFLOW STEPS
+Step 1: Document Intake
+Create an intake button on the website that receives a document (defaulting to PDF format) and an email address for return delivery.
+
+Step 2: Route to Assessment
+Arriving documents are directed to the assessment function.
+
+Step 3: Document Assessment
+The assessment function rates the document for formatting complexity. Initially defaults to approval for all documents.
+NOTE: This is a core value proposition - the service handles 'hairy and messy' document formatting. The assessment should eventually evaluate actual complexity.
+
+Step 4: Generate and Send Quotation
+A quotation is sent to the client. Initially defaults to €10 for all documents.
+NOTE: Production version should use credits-based pricing that accounts for format complexity.
+
+Step 5: Receive Client Decision
+The client decision is received. Initially defaults to 'yes' (approval).
+NOTE: Needs integration with payment processor (Stripe? PayPal? To be decided).
+
+Step 6: Send to Translation Shell
+The document is sent to the shell for processing.
+NOTE: The 'shell' refers to a translation engine wrapper that needs to be built as part of this project. It is not an existing component.
+
+Step 7: Shell Preparation
+The shell performs initial preparation on the document. By default, no preparation is performed initially.
+NOTE: This step will eventually handle document format conversion, text extraction, and formatting preservation logic.
+
+Step 8: API Translation
+The prepared document is fed from the shell into the translation API. Default API is ChatGPT (OpenAI).
+NOTE: Needs clarification on which OpenAI model, how to handle document-to-text conversion, and how to preserve formatting in the round-trip.
+
+Step 9: Receive Translated Document
+The document is received back from the API.
+
+Step 10: Transfer to Delivery Bay
+The translated document is transferred to the delivery bay, where it is held for 48 hours.
+NOTE: Needs file storage solution - where do documents live during this 48-hour period? (AWS S3? Local storage? Database?)
+
+Step 11: Email Delivery
+The document is sent from the delivery bay by email to the client.
+NOTE: Needs email service integration - SendGrid? AWS SES? SMTP? To be decided.
+
+KEY TECHNICAL QUESTIONS TO ADDRESS
+1. Tech Stack:
+   - Backend language/framework? (Node.js? Python? Go?)
+   - Frontend framework? (React? Vue? Plain HTML/JS?)
+   - Database? (PostgreSQL? MongoDB? MySQL?)
+
+2. Document Handling:
+   - What formats beyond PDF? (Word? Excel? PowerPoint?)
+   - How to preserve formatting during translation?
+   - Text extraction method?
+
+3. Assessment Logic:
+   - What determines 'formatting complexity'?
+   - How should complexity map to pricing?
+
+4. Error Handling:
+   - What happens when translation API fails?
+   - What if document format is unsupported?
+   - What if email delivery fails?
+
+5. External Services:
+   - Which payment processor?
+   - Which email service?
+   - File storage solution?
+   - OpenAI model selection?
+
+BUSINESS CONTEXT
+This service is being developed for a 20-year translation company adapting to AI disruption. The core value proposition is handling complex document formatting, not translation itself ('translation is effectively free, text comes in documents which are hairy and messy'). Target customers need European language documents translated to English but have no interest in translation theory or AI technicalities.
+
+The service emphasizes honesty about limitations, includes disclaimers about AI accuracy, and recommends human translators for critical documents. Positioning is instant 24/7 translation with no human review, automated pricing, and 48-hour document deletion for privacy.
+
+
+Remember: PLAN FIRST, ASK QUESTIONS, THEN CODE

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Status - Document Translation</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Order Status</h1>
+      <p class="subtitle">Track your translation progress</p>
+    </header>
+
+    <div class="card">
+      <div id="alert" class="alert"></div>
+
+      <div id="statusContent" style="display: none;">
+        <div class="quote-details">
+          <h3>Order Information</h3>
+          <div class="quote-row">
+            <span class="label">Order ID</span>
+            <span class="value" id="orderId">-</span>
+          </div>
+          <div class="quote-row">
+            <span class="label">Document</span>
+            <span class="value" id="filename">-</span>
+          </div>
+          <div class="quote-row">
+            <span class="label">Source Language</span>
+            <span class="value" id="sourceLanguage">-</span>
+          </div>
+          <div class="quote-row">
+            <span class="label">Quote Amount</span>
+            <span class="value">€<span id="quoteAmount">-</span></span>
+          </div>
+          <div class="quote-row">
+            <span class="label">Status</span>
+            <span class="value"><span class="status-badge" id="status">-</span></span>
+          </div>
+          <div class="quote-row">
+            <span class="label">Created</span>
+            <span class="value" id="createdAt">-</span>
+          </div>
+          <div class="quote-row" id="expiresRow" style="display: none;">
+            <span class="label">Download Expires</span>
+            <span class="value" id="expiresAt">-</span>
+          </div>
+        </div>
+
+        <div id="downloadSection" style="display: none; margin-top: 24px;">
+          <a id="downloadBtn" class="btn btn-success" href="#" target="_blank">
+            Download Translated Document
+          </a>
+        </div>
+
+        <div id="processingSection" style="display: none; margin-top: 24px;">
+          <div class="alert alert-info visible">
+            <strong>Processing...</strong><br>
+            Your document is being translated. This page will refresh automatically.
+          </div>
+        </div>
+
+        <div id="expiredSection" style="display: none; margin-top: 24px;">
+          <div class="alert alert-error visible">
+            <strong>Download Expired</strong><br>
+            The download link for this document has expired. Documents are only available
+            for 48 hours after translation completion.
+          </div>
+        </div>
+      </div>
+
+      <div id="searchForm">
+        <div class="form-group">
+          <label for="orderIdInput">Enter Order ID</label>
+          <input type="text" id="orderIdInput" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+        </div>
+        <button id="searchBtn" class="btn btn-primary">Check Status</button>
+      </div>
+
+      <div id="notFound" style="display: none;">
+        <div class="alert alert-error visible">
+          Order not found. Please check the order ID.
+        </div>
+      </div>
+    </div>
+
+    <p class="privacy-notice">
+      <a href="/">Submit a new document for translation</a>
+    </p>
+  </div>
+
+  <footer>
+    Document Translation Service
+  </footer>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    let orderId = params.get('id');
+
+    const statusContent = document.getElementById('statusContent');
+    const searchForm = document.getElementById('searchForm');
+    const notFound = document.getElementById('notFound');
+    const downloadSection = document.getElementById('downloadSection');
+    const processingSection = document.getElementById('processingSection');
+    const expiredSection = document.getElementById('expiredSection');
+    const expiresRow = document.getElementById('expiresRow');
+
+    if (orderId) {
+      searchForm.style.display = 'none';
+      loadStatus();
+    }
+
+    document.getElementById('searchBtn').addEventListener('click', () => {
+      orderId = document.getElementById('orderIdInput').value.trim();
+      if (orderId) {
+        window.history.pushState({}, '', `?id=${orderId}`);
+        loadStatus();
+      }
+    });
+
+    document.getElementById('orderIdInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('searchBtn').click();
+      }
+    });
+
+    async function loadStatus() {
+      notFound.style.display = 'none';
+      statusContent.style.display = 'none';
+      downloadSection.style.display = 'none';
+      processingSection.style.display = 'none';
+      expiredSection.style.display = 'none';
+
+      try {
+        const response = await fetch(`/api/status/${orderId}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          notFound.style.display = 'block';
+          searchForm.style.display = 'block';
+          return;
+        }
+
+        searchForm.style.display = 'none';
+
+        document.getElementById('orderId').textContent = data.orderId.substring(0, 8) + '...';
+        document.getElementById('filename').textContent = data.filename;
+        document.getElementById('sourceLanguage').textContent = data.sourceLanguage || 'Auto-detect';
+        document.getElementById('quoteAmount').textContent = data.quoteAmount.toFixed(2);
+        document.getElementById('status').textContent = data.status;
+        document.getElementById('status').className = `status-badge status-${data.status}`;
+        document.getElementById('createdAt').textContent = new Date(data.createdAt).toLocaleString();
+
+        if (data.downloadUrl) {
+          document.getElementById('downloadBtn').href = data.downloadUrl;
+          downloadSection.style.display = 'block';
+          expiresRow.style.display = 'flex';
+          document.getElementById('expiresAt').textContent = new Date(data.expiresAt).toLocaleString();
+        }
+
+        if (data.status === 'processing' || data.status === 'paid') {
+          processingSection.style.display = 'block';
+          setTimeout(loadStatus, 5000); // Refresh every 5 seconds
+        }
+
+        if (data.expired || data.status === 'expired') {
+          expiredSection.style.display = 'block';
+        }
+
+        statusContent.style.display = 'block';
+      } catch (error) {
+        console.error('Failed to load status:', error);
+        notFound.style.display = 'block';
+        searchForm.style.display = 'block';
+      }
+    }
+  </script>
+</body>
+</html>

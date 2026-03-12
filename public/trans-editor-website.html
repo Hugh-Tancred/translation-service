@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trans-editor | Document Translation Service</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --text-primary: #1a1a1a;
+            --text-secondary: #3d3d3d;
+            --text-muted: #5a5a5a;
+            --bg-cream: #f9f6f1;
+            --bg-cream-dark: #f0ebe3;
+            --bg-white: #ffffff;
+            --accent: #2c4a3e;
+            --accent-hover: #1e352c;
+            --accent-light: #e8eeeb;
+            --border: #d9d4cb;
+            --border-light: #e8e4dc;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-cream);
+            color: var(--text-primary);
+            line-height: 1.65;
+            font-size: 17px;
+        }
+
+        h1, h2, h3 {
+            font-family: 'Libre Baskerville', Georgia, serif;
+            font-weight: 400;
+            line-height: 1.3;
+        }
+
+        /* Header */
+        header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .header-content {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Libre Baskerville', Georgia, serif;
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            text-decoration: none;
+            letter-spacing: -0.02em;
+        }
+
+        .header-note {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* Main container */
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Hero */
+        .hero {
+            padding: 5rem 0 4rem;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 2.4rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 540px;
+            margin: 0 auto 2.5rem;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background-color: var(--accent);
+            color: white;
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+            font-weight: 500;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.2s ease, transform 0.15s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .cta-button:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        /* Sections */
+        section { padding: 3.5rem 0; }
+
+        section h2 {
+            font-size: 1.6rem;
+            margin-bottom: 1.5rem;
+        }
+
+        section p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        section p:last-child { margin-bottom: 0; }
+
+        /* Proposition */
+        .proposition {
+            background-color: var(--bg-white);
+            border-top: 1px solid var(--border-light);
+            border-bottom: 1px solid var(--border-light);
+            padding: 4rem 0;
+        }
+
+        .proposition-highlight {
+            font-family: 'Libre Baskerville', Georgia, serif;
+            font-size: 1.35rem;
+            font-style: italic;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        /* Features */
+        .features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .feature {
+            background: var(--bg-white);
+            padding: 1.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-light);
+        }
+
+        .feature h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        .feature p {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        /* Process */
+        .process-steps { margin-top: 2rem; }
+
+        .step {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            align-items: flex-start;
+        }
+
+        .step:last-child { margin-bottom: 0; }
+
+        .step-number {
+            flex-shrink: 0;
+            width: 36px;
+            height: 36px;
+            background-color: var(--accent);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .step-content h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .step-content p {
+            color: var(--text-muted);
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        /* Pricing */
+        .pricing-section {
+            background-color: var(--bg-cream-dark);
+            border-radius: 8px;
+            padding: 2.5rem;
+            margin-top: 2rem;
+        }
+
+        .pricing-section h3 {
+            font-size: 1.15rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .pricing-examples {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .pricing-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .pricing-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .pricing-label { color: var(--text-secondary); }
+
+        .pricing-value {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .pricing-note {
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* Languages */
+        .languages {
+            background: var(--bg-white);
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .languages h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .language-list {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+        }
+
+        /* Upload section */
+        .upload-section {
+            background-color: var(--bg-white);
+            border-top: 1px solid var(--border-light);
+            border-bottom: 1px solid var(--border-light);
+            padding: 4rem 0;
+            text-align: center;
+        }
+
+        .upload-area {
+            position: relative;
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 3rem 2rem;
+            margin: 2rem 0;
+            transition: border-color 0.2s ease, background-color 0.2s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: var(--accent);
+            background-color: var(--accent-light);
+        }
+
+        .upload-area.dragover {
+            border-color: var(--accent);
+            background-color: var(--accent-light);
+        }
+
+        .upload-icon { font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.6; }
+        .upload-text { font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+        .upload-subtext { font-size: 0.9rem; color: var(--text-muted); }
+        .upload-input {
+            display: block;
+            margin: 1rem auto 0;
+            padding: 0.6rem 1.5rem;
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .browse-button {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.6rem 1.5rem;
+            background-color: var(--accent);
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: background-color 0.2s ease;
+        }
+
+        .browse-button:hover {
+            background-color: #1e3d22;
+        }
+
+        /* Quote result */
+        .quote-result {
+            display: none;
+            background: var(--accent-light);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .quote-result.visible { display: block; }
+
+        .quote-filename { font-weight: 500; margin-bottom: 0.5rem; }
+
+        .quote-details {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .quote-price {
+            font-family: 'Libre Baskerville', Georgia, serif;
+            font-size: 2.4rem;
+            color: var(--accent);
+            margin-bottom: 0.4rem;
+        }
+
+        .quote-price-note {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+
+        .output-format-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .output-format-options {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .output-format-options label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .email-option {
+            margin: 1.5rem 0 0;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .email-option label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .email-input-wrapper { display: none; margin-top: 1rem; }
+        .email-input-wrapper.visible { display: block; }
+
+        .email-input {
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            width: 100%;
+            max-width: 300px;
+            font-family: inherit;
+        }
+
+        .email-input:focus { outline: none; border-color: var(--accent); }
+
+        /* Caveats */
+        .caveats {
+            background-color: var(--bg-cream-dark);
+            padding: 4rem 0;
+        }
+
+        .caveats h2 { margin-bottom: 1.5rem; }
+
+        .caveat-list { list-style: none; }
+
+        .caveat-list li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .caveat-list li:before {
+            content: "—";
+            position: absolute;
+            left: 0;
+            color: var(--text-muted);
+        }
+
+        .caveat-list li:last-child { margin-bottom: 0; }
+
+        /* Spinner */
+        .access-spinner {
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Footer */
+        footer {
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border-light);
+            text-align: center;
+        }
+
+        .footer-content { max-width: 1100px; margin: 0 auto; }
+
+        .footer-main {
+            font-family: 'Libre Baskerville', Georgia, serif;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .footer-legal { font-size: 0.85rem; color: var(--text-muted); }
+
+        .footer-contact {
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .footer-contact a { color: var(--text-muted); }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            body { font-size: 16px; }
+            header { padding: 1.25rem 1.5rem; }
+            .header-content { flex-direction: column; gap: 0.5rem; text-align: center; }
+            .container { padding: 0 1.5rem; }
+            .hero { padding: 3.5rem 0 3rem; }
+            .hero h1 { font-size: 1.9rem; }
+            .hero-subtitle { font-size: 1.1rem; }
+            section { padding: 2.5rem 0; }
+            section h2 { font-size: 1.4rem; }
+            .proposition { padding: 3rem 0; }
+            .proposition-highlight { font-size: 1.2rem; }
+            .features { grid-template-columns: 1fr; gap: 1.25rem; }
+            .feature { padding: 1.5rem; }
+            .pricing-section { padding: 2rem 1.5rem; }
+            .upload-section { padding: 3rem 0; }
+            .upload-area { padding: 2.5rem 1.5rem; }
+            .caveats { padding: 3rem 0; }
+            footer { padding: 2.5rem 1.5rem; }
+        }
+
+        @media (max-width: 480px) {
+            .hero h1 { font-size: 1.65rem; }
+            .cta-button { padding: 0.9rem 2rem; font-size: 1rem; width: 100%; }
+            .step { gap: 1rem; }
+            .step-number { width: 32px; height: 32px; font-size: 0.9rem; }
+            .pricing-row { flex-direction: column; align-items: flex-start; gap: 0.25rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-content">
+            <a class="logo" href="/">Trans-editor</a>
+            <span class="header-note">Document translation · European languages into English</span>
+        </div>
+    </header>
+
+    <main>
+
+        <!-- Hero -->
+        <section class="hero">
+            <div class="container">
+                <h1>Professional document translation,<br>delivered in minutes</h1>
+                <p class="hero-subtitle">Upload your document. Get an instant price. Receive your translation—formatted and ready to use.</p>
+                <a href="#upload" class="cta-button">Get your instant quote</a>
+            </div>
+        </section>
+
+        <!-- Proposition -->
+        <section class="proposition">
+            <div class="container">
+                <p class="proposition-highlight">Most translation services can translate words. The hard part is preserving the structure of a real document—its footnotes, headings, reference lists, and layout.</p>
+                <p>Trans-editor is built on twenty years of document handling experience. We use state-of-the-art AI to translate, and our own technology to reconstruct documents so that the result is usable, not just readable.</p>
+                <p>Fully automated, available around the clock. Your document is processed, translated, and returned to you—formatted—without any human handling.</p>
+
+                <div class="features">
+                    <div class="feature">
+                        <h3>Structure preserved</h3>
+                        <p>Footnotes, numbered references, headings, and document layout are reconstructed in the output—not stripped away.</p>
+                    </div>
+                    <div class="feature">
+                        <h3>Instant pricing</h3>
+                        <p>You see the exact price before you pay. No quote forms, no waiting for a human to respond.</p>
+                    </div>
+                    <div class="feature">
+                        <h3>PDF or Word output</h3>
+                        <p>Receive your translation as a formatted PDF, or as an editable Word document—your choice.</p>
+                    </div>
+                    <div class="feature">
+                        <h3>Private by design</h3>
+                        <p>Your document is deleted from our servers within 48 hours. No account required, no data retained.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How it works -->
+        <section>
+            <div class="container">
+                <h2>How it works</h2>
+                <div class="process-steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h3>Upload your document</h3>
+                            <p>PDF or Word file. Drop it in and we'll analyse it immediately.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h3>See your price</h3>
+                            <p>Instant quote based on your actual document. No obligation, no account, no email required.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h3>Pay and receive</h3>
+                            <p>One payment by card. Download your formatted translation immediately, or have it sent to your email.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pricing -->
+        <section>
+            <div class="container">
+                <h2>Pricing</h2>
+                <p>You see the exact price before you pay—no surprises. Pricing is based on document length and complexity. A minimum charge of €3.00 applies to all jobs.</p>
+                <div class="pricing-section">
+                    <h3>Indicative pricing</h3>
+                    <div class="pricing-examples">
+                        <div class="pricing-row">
+                            <span class="pricing-label">Word document, 5 pages (~1,500 words)</span>
+                            <span class="pricing-value">from €3.00</span>
+                        </div>
+                        <div class="pricing-row">
+                            <span class="pricing-label">Standard PDF, 5 pages (~1,500 words)</span>
+                            <span class="pricing-value">€3.00–5.00</span>
+                        </div>
+                        <div class="pricing-row">
+                            <span class="pricing-label">Longer document, 20 pages (~6,000 words)</span>
+                            <span class="pricing-value">€8.00–14.00</span>
+                        </div>
+                        <div class="pricing-row">
+                            <span class="pricing-label">Short letter or certificate (1–2 pages)</span>
+                            <span class="pricing-value">€3.00</span>
+                        </div>
+                    </div>
+                    <p class="pricing-note">Your exact price is calculated when you upload. All prices in euros, charged by card at the time of translation.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Languages -->
+        <section>
+            <div class="container">
+                <h2>Languages</h2>
+                <div class="languages">
+                    <h3>European languages into English</h3>
+                    <p class="language-list">French, German, Spanish, Italian, Portuguese, Dutch, Polish, Swedish, Danish, Norwegian, Greek, Czech, Romanian, Bulgarian, Slovenian, and other European languages—all translated into English.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Upload / Quote -->
+        <section class="upload-section" id="upload">
+            <div class="container">
+                <h2>Get your instant quote</h2>
+                <p>Upload your document. We'll assess it and show you the price—no payment, no commitment.</p>
+
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📄</div>
+                    <p class="upload-text">Drop your document here</p>
+                    <p class="upload-subtext">PDF or Word (.docx) accepted · max 10MB</p>
+                    <input type="file" class="upload-input" id="fileInput" accept=".pdf,.docx">
+                </div>
+
+                <div class="quote-result" id="quoteResult">
+                    <p class="quote-filename" id="fileName"></p>
+                    <p class="quote-details" id="fileDetails"></p>
+                    <p class="quote-price" id="quotePrice"></p>
+                    <p class="quote-price-note" id="quotePriceNote"></p>
+
+                    <span class="output-format-label">Output format</span>
+                    <div class="output-format-options">
+                        <label><input type="radio" name="outputFormat" value="pdf" checked> PDF</label>
+                        <label><input type="radio" name="outputFormat" value="word"> Word (.docx)</label>
+                    </div>
+
+                    <button class="cta-button" id="payButton">Translate this document</button>
+
+                    <div class="email-option">
+                        <label>
+                            <input type="checkbox" id="emailCheckbox">
+                            Send a copy to my email (optional)
+                        </label>
+                        <div class="email-input-wrapper" id="emailWrapper">
+                            <input type="email" class="email-input" id="emailInput" placeholder="your@email.com">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Caveats -->
+        <section class="caveats">
+            <div class="container">
+                <h2>What you should know</h2>
+                <ul class="caveat-list">
+                    <li>This service translates into English only. We do not currently offer translation into other languages.</li>
+                    <li>We accept documents in European languages. Documents in non-European languages cannot currently be processed.</li>
+                    <li>We translate one document at a time. Batch submissions are not supported.</li>
+                    <li>This is a fully automated service. No human reviews your document or checks the translation.</li>
+                    <li>AI translation is very good, but not infallible. We recommend treating this as a working translation rather than a certified one.</li>
+                    <li>If your document is legally or financially consequential—a contract you'll sign, medical instructions you'll follow, evidence for court—we recommend also consulting a qualified human translator.</li>
+                    <li>This service does not produce certified translations. If a certified or sworn translation is required, please consult a qualified human translator.</li>
+                    <li>The translated document will be clearly laid out, but will not exactly replicate complex original formatting such as tables or multi-column layouts.</li>
+                    <li>Delivery is usually within a few minutes but is not guaranteed. If you provided an email address, your document will be sent there on completion.</li>
+                    <li>Your document is deleted from our servers within 48 hours of delivery.</li>
+                </ul>
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <p class="footer-main">Twenty years of translation experience. Now available around the clock.</p>
+            <p class="footer-legal">Trans-editor Ltd. Registered in England and Wales.</p>
+            <p class="footer-contact">Questions? <a href="/cdn-cgi/l/email-protection#f59d9099999ab58187949b86d890919c819a87db969a98"><span class="__cf_email__" data-cfemail="fc9499909093bc888e9d928fd199989588938ed29f9391">[email&#160;protected]</span></a></p>
+        </div>
+    </footer>
+
+    
+        const uploadArea = document.getElementById('uploadArea');
+        const quoteResult = document.getElementById('quoteResult');
+        const emailCheckbox = document.getElementById('emailCheckbox');
+        const emailWrapper = document.getElementById('emailWrapper');
+        const payButton = document.getElementById('payButton');
+
+        let currentOrderId = null;
+
+        // ── Upload area interactions ───────────────────────────────────────────
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+        });
+
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handleFile(e.target.files[0]);
+        });
+
+        // ── Handle uploaded file ───────────────────────────────────────────────
+
+        async function handleFile(file) {
+            const extension = file.name.split('.').pop().toLowerCase();
+            if (!['pdf', 'docx'].includes(extension)) {
+                alert('Please upload a PDF or Word (.docx) file.');
+                return;
+            }
+
+            uploadArea.innerHTML = `
+                <div class="access-spinner" style="width:32px;height:32px;margin:1.5rem auto;"></div>
+                <p class="upload-text">Uploading and analysing document…</p>
+            `;
+
+            try {
+                const formData = new FormData();
+                formData.append('document', file);
+                formData.append('email', 'noemail@placeholder.com');
+                formData.append('sourceLanguage', 'European Language');
+
+                const response = await fetch('/api/upload', { method: 'POST', body: formData });
+                const data = await response.json();
+
+                if (!response.ok) throw new Error(data.error || 'Upload failed');
+
+                currentOrderId = data.orderId;
+
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('fileDetails').textContent = 'Document uploaded successfully';
+                document.getElementById('quotePrice').textContent = `€${data.quote.amount.toFixed(2)}`;
+                document.getElementById('quotePriceNote').textContent = 'Exact price for your document · charged by card on translation';
+
+                quoteResult.classList.add('visible');
+                uploadArea.style.display = 'none';
+                quoteResult.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            } catch (error) {
+                resetUploadArea();
+                alert('Failed to upload document: ' + error.message);
+            }
+        }
+
+        // ── Email toggle ───────────────────────────────────────────────────────
+
+        emailCheckbox.addEventListener('change', () => {
+            emailWrapper.classList.toggle('visible', emailCheckbox.checked);
+        });
+
+        // ── Pay / translate ────────────────────────────────────────────────────
+
+        payButton.addEventListener('click', handlePayment);
+
+        async function handlePayment() {
+            if (!currentOrderId) {
+                alert('No order found. Please upload a document first.');
+                return;
+            }
+
+            payButton.disabled = true;
+            payButton.innerHTML = '<span class="access-spinner" style="display:inline-block;width:16px;height:16px;vertical-align:middle;margin-right:8px;"></span>Translating…';
+
+            try {
+                const outputFormat = document.querySelector('input[name="outputFormat"]:checked')?.value || 'pdf';
+                const deliveryEmail = emailCheckbox.checked ? document.getElementById('emailInput').value : null;
+
+                const response = await fetch(`/api/quote/${currentOrderId}/accept`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ outputFormat, deliveryEmail })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Failed to process order');
+if (data.checkoutUrl) {
+    window.location.href = data.checkoutUrl;
+    return;
+}
+
+                quoteResult.innerHTML = `
+                    <div style="padding:1.5rem 0;">
+                        <div style="font-size:2.5rem;margin-bottom:1rem;color:var(--accent);">✓</div>
+                        <h3 style="font-family:'Libre Baskerville',Georgia,serif;margin-bottom:0.75rem;">Translation complete</h3>
+                        <p style="color:var(--text-secondary);margin-bottom:1.75rem;">Your document is ready to download.</p>
+                        <a href="${data.downloadUrl}"
+                           download="${data.filename || (outputFormat === 'word' ? 'translated_document.docx' : 'translated_document.pdf')}"
+                           class="cta-button"
+                           style="display:inline-block;margin-bottom:1.5rem;text-decoration:none;">
+                            Download your translation
+                        </a>
+                        ${emailCheckbox.checked
+                            ? '<p style="color:var(--text-muted);font-size:0.9rem;margin-top:1rem;">A copy has also been sent to your email.</p>'
+                            : ''}
+                        <p style="color:var(--text-muted);font-size:0.85rem;margin-top:0.75rem;">This download link expires in 48 hours.</p>
+                        <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border-light);">
+                            <button onclick="resetToUpload()" class="cta-button" style="background-color:var(--text-muted);">
+                                Translate another document
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+            } catch (error) {
+                payButton.disabled = false;
+                payButton.innerHTML = 'Translate this document';
+                alert('Translation failed: ' + error.message);
+            }
+        }
+
+        // ── Reset ──────────────────────────────────────────────────────────────
+
+        function resetUploadArea() {
+            uploadArea.innerHTML = `
+                <div class="upload-icon">📄</div>
+                <p class="upload-text">Drop your document here</p>
+                <p class="upload-subtext">PDF or Word (.docx) accepted · max 10MB</p>
+                <input type="file" class="upload-input" id="fileInput" accept=".pdf,.docx">
+            `;
+            uploadArea.style.display = '';
+            document.getElementById('fileInput').addEventListener('change', (e) => {
+                if (e.target.files.length > 0) handleFile(e.target.files[0]);
+            });
+        }
+
+        function resetToUpload() {
+            currentOrderId = null;
+            resetUploadArea();
+            quoteResult.classList.remove('visible');
+            quoteResult.innerHTML = `
+                <p class="quote-filename" id="fileName"></p>
+                <p class="quote-details" id="fileDetails"></p>
+                <p class="quote-price" id="quotePrice"></p>
+                <p class="quote-price-note" id="quotePriceNote"></p>
+                <span class="output-format-label">Output format</span>
+                <div class="output-format-options">
+                    <label><input type="radio" name="outputFormat" value="pdf" checked> PDF</label>
+                    <label><input type="radio" name="outputFormat" value="word"> Word (.docx)</label>
+                </div>
+                <button class="cta-button" id="payButton">Translate this document</button>
+                <div class="email-option">
+                    <label>
+                        <input type="checkbox" id="emailCheckbox">
+                        Send a copy to my email (optional)
+                    </label>
+                    <div class="email-input-wrapper" id="emailWrapper">
+                        <input type="email" class="email-input" id="emailInput" placeholder="your@email.com">
+                    </div>
+                </div>
+            `;
+            document.getElementById('payButton').addEventListener('click', handlePayment);
+            document.getElementById('emailCheckbox').addEventListener('change', () => {
+                document.getElementById('emai

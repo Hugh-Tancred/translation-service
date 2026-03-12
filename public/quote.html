@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accept Quote - Document Translation</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Translation Quote</h1>
+      <p class="subtitle">Review and accept your quote</p>
+    </header>
+
+    <div class="card">
+      <div id="alert" class="alert"></div>
+
+      <div id="quoteContent" style="display: none;">
+        <div class="quote-amount">
+          €<span id="quoteAmount">10.00</span>
+        </div>
+
+        <div class="quote-details">
+          <h3>Order Details</h3>
+          <div class="quote-row">
+            <span class="label">Document</span>
+            <span class="value" id="filename">-</span>
+          </div>
+          <div class="quote-row">
+            <span class="label">Source Language</span>
+            <span class="value" id="sourceLanguage">-</span>
+          </div>
+          <div class="quote-row">
+            <span class="label">Target Language</span>
+            <span class="value">English</span>
+          </div>
+          <div class="quote-row">
+            <span class="label">Status</span>
+            <span class="value"><span class="status-badge" id="status">-</span></span>
+          </div>
+        </div>
+
+        <button id="acceptBtn" class="btn btn-success">
+          Accept Quote & Start Translation
+        </button>
+
+        <div class="loading" id="loading">
+          <div class="spinner"></div>
+          <p>Processing...</p>
+        </div>
+
+        <div class="disclaimer">
+          <strong>AI Translation Notice</strong>
+          By accepting this quote, you acknowledge that this translation is generated using
+          artificial intelligence. While we strive for accuracy, AI translations may contain
+          errors or miss nuances present in the original document.
+        </div>
+      </div>
+
+      <div id="alreadyAccepted" style="display: none;">
+        <div class="alert alert-info visible">
+          This quote has already been accepted. Check your email for the translated document,
+          or <a href="#" id="statusLink">check order status</a>.
+        </div>
+      </div>
+
+      <div id="notFound" style="display: none;">
+        <div class="alert alert-error visible">
+          Quote not found. Please check the link in your email.
+        </div>
+      </div>
+    </div>
+
+    <p class="privacy-notice">
+      Your documents are stored securely and automatically deleted after 48 hours.
+    </p>
+  </div>
+
+  <footer>
+    Document Translation Service
+  </footer>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get('id');
+
+    const quoteContent = document.getElementById('quoteContent');
+    const alreadyAccepted = document.getElementById('alreadyAccepted');
+    const notFound = document.getElementById('notFound');
+    const alert = document.getElementById('alert');
+    const acceptBtn = document.getElementById('acceptBtn');
+    const loading = document.getElementById('loading');
+    const statusLink = document.getElementById('statusLink');
+
+    if (!orderId) {
+      notFound.style.display = 'block';
+    } else {
+      loadQuote();
+    }
+
+    statusLink.href = `/status.html?id=${orderId}`;
+
+    async function loadQuote() {
+      try {
+        const response = await fetch(`/api/quote/${orderId}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          notFound.style.display = 'block';
+          return;
+        }
+
+        if (data.status !== 'quoted') {
+          alreadyAccepted.style.display = 'block';
+          return;
+        }
+
+        document.getElementById('quoteAmount').textContent = data.quoteAmount.toFixed(2);
+        document.getElementById('filename').textContent = data.filename;
+        document.getElementById('sourceLanguage').textContent = data.sourceLanguage || 'Auto-detect';
+        document.getElementById('status').textContent = data.status;
+        document.getElementById('status').className = `status-badge status-${data.status}`;
+
+        quoteContent.style.display = 'block';
+      } catch (error) {
+        console.error('Failed to load quote:', error);
+        notFound.style.display = 'block';
+      }
+    }
+
+    acceptBtn.addEventListener('click', async () => {
+      acceptBtn.disabled = true;
+      acceptBtn.style.display = 'none';
+      loading.classList.add('visible');
+
+      try {
+        const response = await fetch(`/api/quote/${orderId}/accept`, {
+          method: 'POST'
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error);
+        }
+
+        alert.className = 'alert alert-success visible';
+        alert.innerHTML = `
+          <strong>Quote Accepted!</strong><br>
+          Your translation is being processed. You will receive an email when it's ready.<br><br>
+          <a href="/status.html?id=${orderId}">Track order status</a>
+        `;
+        loading.classList.remove('visible');
+      } catch (error) {
+        alert.className = 'alert alert-error visible';
+        alert.textContent = error.message || 'Failed to accept quote. Please try again.';
+        acceptBtn.disabled = false;
+        acceptBtn.style.display = 'block';
+        loading.classList.remove('visible');
+      }
+    });
+  </script>
+</body>
+</html>

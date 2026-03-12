@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm init:*)",
+      "Bash(where:*)",
+      "Bash(npm install:*)",
+      "Bash(npm start)",
+      "Bash(copy:*)",
+      "Bash(notepad:*)",
+      "Bash(npx kill-port:*)",
+      "Bash(tree:*)"
+    ]
+  }
+}
