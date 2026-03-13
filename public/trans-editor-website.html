@@ -853,6 +853,7 @@ if (data.checkoutUrl) {
                 <input type="file" class="upload-input" id="fileInput" accept=".pdf,.docx">
             `;
             uploadArea.style.display = '';
+            uploadArea.onclick = () => document.getElementById('fileInput').click();
             document.getElementById('fileInput').addEventListener('change', (e) => {
                 if (e.target.files.length > 0) handleFile(e.target.files[0]);
             });
