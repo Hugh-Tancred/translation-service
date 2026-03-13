@@ -854,9 +854,10 @@ if (data.checkoutUrl) {
             `;
             uploadArea.style.display = '';
             uploadArea.onclick = () => document.getElementById('fileInput').click();
-            document.getElementById('fileInput').addEventListener('change', (e) => {
+            const fi = document.getElementById('fileInput');
+            fi.onchange = (e) => {
                 if (e.target.files.length > 0) handleFile(e.target.files[0]);
-            });
+            };
         }
 
         function resetToUpload() {
