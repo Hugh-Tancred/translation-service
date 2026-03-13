@@ -40,20 +40,21 @@ router.post('/:orderId/accept', async (req, res) => {
     const outputFormat = req.body.outputFormat || 'pdf';
     const deliveryEmail = req.body.deliveryEmail || null;
 
-    // FREE MODE: bypass Stripe and process immediately
+    // FREE MODE: bypass Stripe and process immediately, wait for AI to finish
     if (process.env.FREE_MODE === 'true') {
       const { processTranslation } = require('../services/translation');
-      db.prepare('UPDATE orders SET status = ?, paid_at = CURRENT_TIMESTAMP WHERE id = ?')
-        .run('paid', order.id);
+      // Mark as "paid"
+      db.prepare('UPDATE orders SET status = ?, paid_at = CURRENT_TIMESTAMP WHERE id = ?').run('paid', order.id);
 
       try {
+        // Wait for translation process to finish before responding
         await processTranslation(order.id, outputFormat);
 
+        // Get updated order info after translation
         const updatedOrder = db.prepare('SELECT * FROM orders WHERE id = ?').get(order.id);
-        const finalS3Key = (outputFormat === 'word')
-          ? updatedOrder.s3_key_word
-          : updatedOrder.s3_key_pdf;
-        const keyToUse = finalS3Key || updatedOrder.s3_key_translated;
+
+        // Only use s3_key_translated (no s3_key_word/pdf)
+        const keyToUse = updatedOrder.s3_key_translated;
 
         const baseName = updatedOrder.original_filename.replace(/\.(pdf|docx)$/i, '');
         const downloadName = outputFormat === 'word'
@@ -62,8 +63,7 @@ router.post('/:orderId/accept', async (req, res) => {
 
         const downloadUrl = await getPresignedUrl(keyToUse, 48 * 60 * 60, downloadName);
 
-        db.prepare('UPDATE orders SET status = ?, delivered_at = CURRENT_TIMESTAMP WHERE id = ?')
-          .run('delivered', order.id);
+        db.prepare('UPDATE orders SET status = ?, delivered_at = CURRENT_TIMESTAMP WHERE id = ?').run('delivered', order.id);
 
         const emailToUse = deliveryEmail || updatedOrder.email;
         if (emailToUse && emailToUse !== 'noemail@placeholder.com') {

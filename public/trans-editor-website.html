@@ -705,7 +705,7 @@
         </div>
     </footer>
 
-    
+    <script>
         const uploadArea = document.getElementById('uploadArea');
         const quoteResult = document.getElementById('quoteResult');
         const emailCheckbox = document.getElementById('emailCheckbox');
@@ -884,5 +884,11 @@ if (data.checkoutUrl) {
                 </div>
             `;
             document.getElementById('payButton').addEventListener('click', handlePayment);
-            document.getElementById('emailCheckbox').addEventListener('change', () => {
-                document.getElementById('emai
+        }
+
+        document.getElementById('emailCheckbox').addEventListener('change', () => {
+            document.getElementById('emailWrapper').classList.toggle('visible', document.getElementById('emailCheckbox').checked);
+        });
+    </script>
+</body>
+</html>

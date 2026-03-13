@@ -137,9 +137,9 @@ async function translateText(text, sourceLanguage = 'European language', customP
     }
 
     // Restore structural tags
-    translatedContent = translatedContent.replace(/⟦TITLE⟧ /g,    '##TITLE## ')
-                                         .replace(/⟦HEADING⟧ /g,  '##HEADING## ')
-                                         .replace(/⟦LISTITEM⟧ /g, '##LISTITEM## ');
+    translatedContent = translatedContent.replace(/⟦TITLE⟧\s*/g,    '##TITLE## ')
+                                     .replace(/⟦HEADING⟧\s*/g,  '##HEADING## ')
+                                     .replace(/⟦LISTITEM⟧\s*/g, '##LISTITEM## ');
 
     return translatedContent;
   } catch (error) {
