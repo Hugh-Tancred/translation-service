@@ -43,6 +43,7 @@ function buildSystemPrompt(sourceLanguage) {
   return `You are a professional translator. Translate the following document from ${sourceLanguage} to English.
 Maintain the original formatting, paragraph structure, and meaning as closely as possible.
 Preserve any technical terms, proper nouns, and specialized vocabulary appropriately.
+Any token matching the pattern XX...X (such as XXTITLEX, XXHEADINGX, XXLISTITEMX) is a structural marker — copy it into the output exactly as-is, without modification, translation, or reformatting.
 Only output the translation, nothing else.`;
 }
 
@@ -124,11 +125,11 @@ async function translateText(text, sourceLanguage = 'European language', customP
     const systemPrompt = customPrompt || buildSystemPrompt(sourceLanguage);
 
     // Protect structural tags from translation model
-    text = text.replace(/##TITLE## /g,    '⟦TITLE⟧ ')
-               .replace(/##HEADING## /g,  '⟦HEADING⟧ ')
-               .replace(/##LISTITEM## /g, '⟦LISTITEM⟧ ');
+    text = text.replace(/##TITLE## /g,    'XXTITLEX ')
+               .replace(/##HEADING## /g,  'XXHEADINGX ')
+               .replace(/##LISTITEM## /g, 'XXLISTITEMX ');
 
-    let translatedContent;
+        let translatedContent;
     switch (CURRENT_MODEL.provider) {
       case 'anthropic': translatedContent = await translateWithClaude(text, systemPrompt); break;
       case 'openai': translatedContent = await translateWithOpenAI(text, systemPrompt); break;
@@ -137,10 +138,11 @@ async function translateText(text, sourceLanguage = 'European language', customP
     }
 
     // Restore structural tags
-    translatedContent = translatedContent.replace(/⟦TITLE⟧\s*/g,    '##TITLE## ')
-                                     .replace(/⟦HEADING⟧\s*/g,  '##HEADING## ')
-                                     .replace(/⟦LISTITEM⟧\s*/g, '##LISTITEM## ');
-
+    
+    translatedContent = translatedContent.replace(/XXTITLEX\s*/g,    '##TITLE## ')
+                                         .replace(/XXHEADINGX\s*/g,  '##HEADING## ')
+                                         .replace(/XXLISTITEMX\s*/g, '##LISTITEM## ');
+    
     return translatedContent;
   } catch (error) {
     console.error(`${CURRENT_MODEL.name} API error:`, error.message);
