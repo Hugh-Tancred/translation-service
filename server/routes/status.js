@@ -60,7 +60,7 @@ router.get('/:orderId', async (req, res) => {
       deliveredAt: order.delivered_at,
       expiresAt: order.expires_at
     };
-
+    console.log(`Status check for ${order.id}: status=${order.status}, s3_key_translated=${order.s3_key_translated}, s3_key_pdf=${order.s3_key_pdf}`);
     if (order.status === 'delivered' && order.s3_key_translated) {
       const now = new Date();
       const expiresAt = new Date(order.expires_at);
