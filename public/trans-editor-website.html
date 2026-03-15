@@ -803,7 +803,7 @@
                 const response = await fetch(`/api/quote/${currentOrderId}/accept`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ outputFormat, deliveryEmail })
+                    body: JSON.stringify({ outputFormat, deliveryEmail, promoCode: document.getElementById('promoInput')?.value || '' })
                 });
 
                 const data = await response.json();
@@ -859,7 +859,6 @@ if (data.checkoutUrl) {
                 if (e.target.files.length > 0) handleFile(e.target.files[0]);
             };
         }
-
         function resetToUpload() {
             currentOrderId = null;
             resetUploadArea();
@@ -873,6 +872,9 @@ if (data.checkoutUrl) {
                 <div class="output-format-options">
                     <label><input type="radio" name="outputFormat" value="pdf" checked> PDF</label>
                     <label><input type="radio" name="outputFormat" value="word"> Word (.docx)</label>
+                </div>
+                <div class="promo-option">
+                    <input type="text" class="promo-input" id="promoInput" placeholder="Promo code (optional)">
                 </div>
                 <button class="cta-button" id="payButton">Translate this document</button>
                 <div class="email-option">

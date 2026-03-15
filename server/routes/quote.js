@@ -25,7 +25,7 @@ router.get('/:orderId', (req, res) => {
   }
 });
 
-// Accept quote — either free mode bypass or Stripe Checkout
+// Accept quote — either promo code bypass or Stripe Checkout
 router.post('/:orderId/accept', async (req, res) => {
   try {
     const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.orderId);
@@ -39,9 +39,11 @@ router.post('/:orderId/accept', async (req, res) => {
 
     const outputFormat = req.body.outputFormat || 'pdf';
     const deliveryEmail = req.body.deliveryEmail || null;
+    const promoCode = (req.body.promoCode || '').trim().toUpperCase();
 
-    // FREE MODE: bypass Stripe and process immediately, wait for AI to finish
-    if (process.env.FREE_MODE === 'true') {
+    // PROMO MODE: valid promo code bypasses Stripe and processes immediately
+    const validPromoCode = (process.env.PROMO_CODE || '').trim().toUpperCase();
+    if (promoCode && promoCode === validPromoCode) {
       const { processTranslation } = require('../services/translation');
       // Mark as "paid"
       db.prepare('UPDATE orders SET status = ?, paid_at = CURRENT_TIMESTAMP WHERE id = ?').run('paid', order.id);
@@ -53,7 +55,6 @@ router.post('/:orderId/accept', async (req, res) => {
         // Get updated order info after translation
         const updatedOrder = db.prepare('SELECT * FROM orders WHERE id = ?').get(order.id);
 
-        // Only use s3_key_translated (no s3_key_word/pdf)
         const keyToUse = updatedOrder.s3_key_translated;
 
         const baseName = updatedOrder.original_filename.replace(/\.(pdf|docx)$/i, '');
@@ -73,7 +74,7 @@ router.post('/:orderId/accept', async (req, res) => {
           });
         }
 
-        console.log(`Order ${order.id} completed in FREE MODE`);
+        console.log(`Order ${order.id} completed via promo code`);
 
         return res.json({
           success: true,
@@ -91,6 +92,11 @@ router.post('/:orderId/accept', async (req, res) => {
           orderId: order.id
         });
       }
+    }
+
+    // Invalid promo code entered — reject before hitting Stripe
+    if (promoCode && promoCode !== validPromoCode) {
+      return res.status(400).json({ error: 'Invalid promo code.' });
     }
 
     // PAID MODE: create Stripe Checkout session
