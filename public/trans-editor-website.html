@@ -660,6 +660,9 @@
                         <label><input type="radio" name="outputFormat" value="pdf" checked> PDF</label>
                         <label><input type="radio" name="outputFormat" value="word"> Word (.docx)</label>
                     </div>
+                    <div class="promo-option">
+                        <input type="text" class="promo-input" id="promoInput" placeholder="Promo code (optional)">
+                    </div>
 
                     <button class="cta-button" id="payButton">Translate this document</button>
 
@@ -803,7 +806,7 @@
                 const response = await fetch(`/api/quote/${currentOrderId}/accept`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ outputFormat, deliveryEmail, promoCode: document.getElementById('promoInput')?.value || '' })
+                    body: JSON.stringify({ outputFormat, deliveryEmail })
                 });
 
                 const data = await response.json();
