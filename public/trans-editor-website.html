@@ -806,14 +806,18 @@
                 const response = await fetch(`/api/quote/${currentOrderId}/accept`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ outputFormat, deliveryEmail })
+                    body: JSON.stringify({ outputFormat, deliveryEmail, promoCode: document.getElementById('promoInput')?.value || '' })
                 });
 
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || 'Failed to process order');
-if (data.checkoutUrl) {
-    window.location.href = data.checkoutUrl;
-    return;
+                if (data.checkoutUrl) {
+  window.location.href = data.checkoutUrl;
+  return;
+}
+if (data.promoRedirectUrl) {
+  window.location.href = data.promoRedirectUrl;
+  return;
 }
 
                 quoteResult.innerHTML = `

@@ -41,57 +41,51 @@ router.post('/:orderId/accept', async (req, res) => {
     const deliveryEmail = req.body.deliveryEmail || null;
     const promoCode = (req.body.promoCode || '').trim().toUpperCase();
 
-    // PROMO MODE: valid promo code bypasses Stripe and processes immediately
+    // PROMO MODE: valid promo code bypasses Stripe
     const validPromoCode = (process.env.PROMO_CODE || '').trim().toUpperCase();
     if (promoCode && promoCode === validPromoCode) {
       const { processTranslation } = require('../services/translation');
-      // Mark as "paid"
-      db.prepare('UPDATE orders SET status = ?, paid_at = CURRENT_TIMESTAMP WHERE id = ?').run('paid', order.id);
 
-      try {
-        // Wait for translation process to finish before responding
-        await processTranslation(order.id, outputFormat);
+      // Mark as paid immediately
+      db.prepare('UPDATE orders SET status = ?, paid_at = CURRENT_TIMESTAMP WHERE id = ?')
+        .run('paid', order.id);
 
-        // Get updated order info after translation
-        const updatedOrder = db.prepare('SELECT * FROM orders WHERE id = ?').get(order.id);
+      // Fire translation in background — do not await
+      processTranslation(order.id, outputFormat)
+        .then(async () => {
+          const updatedOrder = db.prepare('SELECT * FROM orders WHERE id = ?').get(order.id);
+          const keyToUse = updatedOrder.s3_key_translated;
 
-        const keyToUse = updatedOrder.s3_key_translated;
+          const baseName = updatedOrder.original_filename.replace(/\.(pdf|docx)$/i, '');
+          const downloadName = outputFormat === 'word'
+            ? `${baseName}_EN.docx`
+            : `${baseName}_EN.pdf`;
 
-        const baseName = updatedOrder.original_filename.replace(/\.(pdf|docx)$/i, '');
-        const downloadName = outputFormat === 'word'
-          ? `${baseName}_EN.docx`
-          : `${baseName}_EN.pdf`;
+          const downloadUrl = await getPresignedUrl(keyToUse, 48 * 60 * 60, downloadName);
 
-        const downloadUrl = await getPresignedUrl(keyToUse, 48 * 60 * 60, downloadName);
+          db.prepare('UPDATE orders SET status = ?, delivered_at = CURRENT_TIMESTAMP WHERE id = ?')
+            .run('delivered', order.id);
 
-        db.prepare('UPDATE orders SET status = ?, delivered_at = CURRENT_TIMESTAMP WHERE id = ?').run('delivered', order.id);
+          const emailToUse = deliveryEmail || updatedOrder.email;
+          if (emailToUse && emailToUse !== 'noemail@placeholder.com') {
+            const emailOrder = { ...updatedOrder, email: emailToUse };
+            sendDeliveryEmail(emailOrder, downloadUrl).catch(err => {
+              console.error(`Failed to send delivery email for order ${order.id}:`, err);
+            });
+          }
 
-        const emailToUse = deliveryEmail || updatedOrder.email;
-        if (emailToUse && emailToUse !== 'noemail@placeholder.com') {
-          const emailOrder = { ...updatedOrder, email: emailToUse };
-          sendDeliveryEmail(emailOrder, downloadUrl).catch(err => {
-            console.error(`Failed to send delivery email for order ${order.id}:`, err);
-          });
-        }
-
-        console.log(`Order ${order.id} completed via promo code`);
-
-        return res.json({
-          success: true,
-          orderId: order.id,
-          message: 'Translation complete! Your document is ready to download.',
-          status: 'delivered',
-          downloadUrl,
-          filename: downloadName
+          console.log(`Order ${order.id} completed via promo code`);
+        })
+        .catch(err => {
+          console.error(`Promo translation failed for order ${order.id}:`, err);
         });
 
-      } catch (translationError) {
-        console.error(`Translation failed for order ${order.id}:`, translationError);
-        return res.status(500).json({
-          error: 'Translation failed: ' + translationError.message,
-          orderId: order.id
-        });
-      }
+      // Respond immediately — frontend redirects to success page and polls by orderId
+      return res.json({
+        success: true,
+        orderId: order.id,
+        promoRedirectUrl: `${process.env.BASE_URL}/success?order_id=${order.id}`
+      });
     }
 
     // Invalid promo code entered — reject before hitting Stripe
