@@ -116,18 +116,22 @@
   <script>
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get('session_id');
+    const orderId = params.get('order_id');
     let attempts = 0;
     const MAX_ATTEMPTS = 24; // 2 minutes at 5s intervals
 
     async function pollForDownload() {
-      if (!sessionId) {
+      if (!sessionId && !orderId) {
         document.getElementById('status-msg').textContent =
           'If you provided an email address, your document will be sent there shortly.';
         return;
       }
 
       try {
-        const res = await fetch(`/api/status/session/${sessionId}`);
+        const url = orderId
+          ? `/api/status/${orderId}`
+          : `/api/status/session/${sessionId}`;
+        const res = await fetch(url);
         if (!res.ok) throw new Error('Status check failed');
         const data = await res.json();
 
