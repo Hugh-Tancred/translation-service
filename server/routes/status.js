@@ -63,9 +63,9 @@ router.get('/:orderId', async (req, res) => {
     console.log(`Status check for ${order.id}: status=${order.status}, s3_key_translated=${order.s3_key_translated}, s3_key_pdf=${order.s3_key_pdf}`);
     if (order.status === 'delivered' && order.s3_key_translated) {
       const now = new Date();
-      const expiresAt = new Date(order.expires_at);
+      const expiresAt = order.expires_at ? new Date(order.expires_at) : null;
 
-      if (now < expiresAt) {
+      if (!expiresAt || now < expiresAt) {
         const isWord = order.s3_key_translated.endsWith('.docx');
         const downloadExt = isWord ? '_EN.docx' : '_EN.pdf';
         const downloadFileName = order.original_filename.replace('.pdf', downloadExt);
@@ -80,6 +80,7 @@ router.get('/:orderId', async (req, res) => {
         response.expired = true;
       }
     }
+```
 
     res.json(response);
   } catch (error) {

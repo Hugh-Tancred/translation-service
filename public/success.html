@@ -118,7 +118,7 @@
     const sessionId = params.get('session_id');
     const orderId = params.get('order_id');
     let attempts = 0;
-    const MAX_ATTEMPTS = 24; // 2 minutes at 5s intervals
+    const MAX_ATTEMPTS = 48; // 4 minutes at 5s intervals
 
     async function pollForDownload() {
       if (!sessionId && !orderId) {
