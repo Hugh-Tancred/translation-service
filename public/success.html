@@ -134,6 +134,7 @@
         const res = await fetch(url);
         if (!res.ok) throw new Error('Status check failed');
         const data = await res.json();
+        console.log('Poll response:', JSON.stringify(data));
 
         if (data.status === 'delivered' && data.downloadUrl) {
           const area = document.getElementById('download-area');
