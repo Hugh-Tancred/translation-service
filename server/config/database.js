@@ -74,9 +74,9 @@ class SimpleDB {
               order.delivered_at = new Date().toISOString();
             } else if (sqlLower.includes('s3_key_translated')) {
               order.s3_key_translated = params[0];
-              order.status = 'completed';
-              order.completed_at = new Date().toISOString();
-              order.expires_at = params[1];
+order.status = params[1];
+order.completed_at = new Date().toISOString();
+order.expires_at = params[2];
             } else if (sqlLower.includes('status = ?')) {
               order.status = params[0];
             }
