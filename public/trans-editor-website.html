@@ -419,9 +419,12 @@
         }
 
         .ack-option label {
-            display: block;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 0.5rem;
             cursor: pointer;
             line-height: 1.5;
+            align-items: start;
         }
 
         .ack-option a {
