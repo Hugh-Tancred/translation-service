@@ -36,6 +36,12 @@ router.post('/', express.raw({ type: 'application/json' }), async (req, res) => 
       db.prepare('UPDATE orders SET stripe_session_id = ? WHERE id = ?')
         .run(session.id, order.id);
 
+      // Store payment intent ID so translation pipeline can capture or cancel
+      if (session.payment_intent) {
+        db.prepare('UPDATE orders SET payment_intent_id = ? WHERE id = ?')
+          .run(session.payment_intent, order.id);
+      }
+
       await processTranslation(order.id, outputFormat);
 
       const updatedOrder = db.prepare('SELECT * FROM orders WHERE id = ?').get(order.id);

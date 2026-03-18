@@ -47,6 +47,7 @@ class SimpleDB {
             complexity_score: params[5],
             quote_amount: params[6],
             stripe_session_id: null,
+            payment_intent_id: null,
             status: 'quoted',
             created_at: new Date().toISOString(),
             quoted_at: new Date().toISOString(),
@@ -66,6 +67,8 @@ class SimpleDB {
           if (order) {
             if (sqlLower.includes('stripe_session_id')) {
               order.stripe_session_id = params[0];
+            } else if (sqlLower.includes('payment_intent_id')) {
+              order.payment_intent_id = params[0];
             } else if (sqlLower.includes('status = ?') && sqlLower.includes('paid_at')) {
               order.status = params[0];
               order.paid_at = new Date().toISOString();

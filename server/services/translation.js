@@ -5,6 +5,7 @@ const { extractText, createPdfFromText } = require('../utils/pdf');
 const { createWordFromText } = require('../utils/word');
 const { downloadFile, uploadFile, getPresignedUrl } = require('./storage');
 const { extractTextWithOCR } = require('./ocr');
+const { capturePayment, cancelPayment } = require('./stripe');
 const db = require('../config/database');
 const { CURRENT_MODEL } = require('../../config');
 
@@ -30,9 +31,6 @@ const SUPERSCRIPT_MAP = {
   '⁵': '5', '⁶': '6', '⁷': '7', '⁸': '8', '⁹': '9'
 };
 
-// Max characters to send in a single translation call.
-// ~12,000 chars ≈ ~4,000 source tokens → leaves plenty of headroom for
-// the translated output within a 16,000 token limit.
 const TRANSLATION_CHUNK_CHARS = 6000;
 
 function normalizeForPdf(text) {
@@ -59,8 +57,6 @@ Apply these fixed translations consistently:
 Output only the translated citation text, nothing else.`;
 }
 
-// Split body text into chunks at paragraph boundaries, keeping each chunk
-// under TRANSLATION_CHUNK_CHARS characters.
 function chunkBodyText(text) {
   const paragraphs = text.split(/\n\n+/);
   const chunks = [];
@@ -129,7 +125,7 @@ async function translateText(text, sourceLanguage = 'European language', customP
                .replace(/##HEADING## /g,  'XXHEADINGX ')
                .replace(/##LISTITEM## /g, 'XXLISTITEMX ');
 
-        let translatedContent;
+    let translatedContent;
     switch (CURRENT_MODEL.provider) {
       case 'anthropic': translatedContent = await translateWithClaude(text, systemPrompt); break;
       case 'openai': translatedContent = await translateWithOpenAI(text, systemPrompt); break;
@@ -138,11 +134,10 @@ async function translateText(text, sourceLanguage = 'European language', customP
     }
 
     // Restore structural tags
-    
     translatedContent = translatedContent.replace(/XXTITLEX\s*/g,    '##TITLE## ')
                                          .replace(/XXHEADINGX\s*/g,  '##HEADING## ')
                                          .replace(/XXLISTITEMX\s*/g, '##LISTITEM## ');
-    
+
     return translatedContent;
   } catch (error) {
     console.error(`${CURRENT_MODEL.name} API error:`, error.message);
@@ -150,7 +145,6 @@ async function translateText(text, sourceLanguage = 'European language', customP
   }
 }
 
-// Translate body text in paragraph-aware chunks and reassemble.
 async function translateBodyText(text, sourceLanguage) {
   const chunks = chunkBodyText(text);
 
@@ -164,18 +158,18 @@ async function translateBodyText(text, sourceLanguage) {
   for (let i = 0; i < chunks.length; i++) {
     console.log(`Translation: translating body chunk ${i + 1}/${chunks.length} (${chunks[i].length} chars)...`);
     let translated;
-let attempts = 0;
-while (attempts < 3) {
-  try {
-    translated = await translateText(chunks[i], sourceLanguage);
-    break;
-  } catch (err) {
-    attempts++;
-    if (attempts >= 3) throw err;
-    console.log(`Translation: chunk ${i + 1} attempt ${attempts} failed (${err.message}), retrying in ${attempts * 10}s...`);
-    await new Promise(r => setTimeout(r, attempts * 10000));
-  }
-}
+    let attempts = 0;
+    while (attempts < 3) {
+      try {
+        translated = await translateText(chunks[i], sourceLanguage);
+        break;
+      } catch (err) {
+        attempts++;
+        if (attempts >= 3) throw err;
+        console.log(`Translation: chunk ${i + 1} attempt ${attempts} failed (${err.message}), retrying in ${attempts * 10}s...`);
+        await new Promise(r => setTimeout(r, attempts * 10000));
+      }
+    }
     translatedChunks.push(translated);
   }
   console.log(`Translation: all body chunks complete, reassembling...`);
@@ -189,24 +183,21 @@ async function processTranslation(orderId, outputFormat = 'pdf') {
   db.prepare('UPDATE orders SET status = ? WHERE id = ?').run('processing', orderId);
 
   try {
-    // Route to Word extraction or OCR depending on file type
-  const isWord = order.original_filename.toLowerCase().endsWith('.docx');
-  let ocrResult;
-  if (isWord) {
-    console.log(`Translation: Word input detected, extracting text directly`);
-    const { extractTextFromWord } = require('../utils/wordExtract');
-    const fileBuffer = await downloadFile(order.s3_key_original);
-    ocrResult = await extractTextFromWord(fileBuffer);
-    console.log(`Translation: Word extraction delivered ${ocrResult.text.length} chars, ${ocrResult.footnotes.length} footnotes`);
-  } else {
-    ocrResult = await extractTextWithOCR(order.s3_key_original);
-    console.log(`Translation: OCR delivered ${ocrResult.text.length} chars, ${ocrResult.footnotes.length} footnotes`);
-  }
+    const isWord = order.original_filename.toLowerCase().endsWith('.docx');
+    let ocrResult;
+    if (isWord) {
+      console.log(`Translation: Word input detected, extracting text directly`);
+      const { extractTextFromWord } = require('../utils/wordExtract');
+      const fileBuffer = await downloadFile(order.s3_key_original);
+      ocrResult = await extractTextFromWord(fileBuffer);
+      console.log(`Translation: Word extraction delivered ${ocrResult.text.length} chars, ${ocrResult.footnotes.length} footnotes`);
+    } else {
+      ocrResult = await extractTextWithOCR(order.s3_key_original);
+      console.log(`Translation: OCR delivered ${ocrResult.text.length} chars, ${ocrResult.footnotes.length} footnotes`);
+    }
 
-    // Translate body text — chunked to avoid token limit truncation
     const translatedText = await translateBodyText(ocrResult.text, order.source_language);
 
-    // Translate footnotes individually with a dedicated citation prompt
     const footnotePrompt = buildFootnotePrompt(order.source_language);
     const translatedFootnotes = [];
     for (const fn of (ocrResult.footnotes || [])) {
@@ -233,7 +224,6 @@ async function processTranslation(orderId, outputFormat = 'pdf') {
 
     const translatedKey = `translated/${orderId}/${order.original_filename.replace('.pdf', fileExtension)}`;
 
-    // CRITICAL: Uploading with the correct MIME type
     await uploadFile(translatedKey, translatedFile, contentType);
 
     const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
@@ -241,10 +231,20 @@ async function processTranslation(orderId, outputFormat = 'pdf') {
     db.prepare('UPDATE orders SET s3_key_translated = ?, status = ?, completed_at = CURRENT_TIMESTAMP, expires_at = ? WHERE id = ?')
       .run(translatedKey, 'delivered', expiresAt, orderId);
 
+    // Capture payment now that translation succeeded
+    if (order.payment_intent_id) {
+      await capturePayment(order.payment_intent_id);
+    }
+
     return { success: true, translatedKey };
+
   } catch (error) {
     console.error(`Order ${orderId}: Translation pipeline failed:`, error.message);
     db.prepare('UPDATE orders SET status = ? WHERE id = ?').run('failed', orderId);
+    // Cancel the authorised payment — customer should not be charged
+    if (order.payment_intent_id) {
+      await cancelPayment(order.payment_intent_id);
+    }
     throw error;
   }
 }
