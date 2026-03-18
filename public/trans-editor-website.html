@@ -460,6 +460,16 @@
         }
 
         @keyframes spin { to { transform: rotate(360deg); } }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0,0,0,0);
+            border: 0;
+        }
 
         /* Footer */
         footer {
@@ -710,11 +720,11 @@
             <p class="footer-legal">Trans-editor Ltd. Registered in England and Wales. Company address: 20 Wenlock Road, London N1 7GU.</p>
             <p class="footer-contact">Questions? <a href="mailto:info@transeditor.tech">info@transeditor.tech</a></p>
             <p class="footer-legal" style="margin-top:1rem;">
-                <a href="https://www.iubenda.com/privacy-policy/57313695" class="iubenda-white iubenda-noiframe iubenda-embed" title="Privacy Policy">Privacy Policy</a>
+                <a href="https://www.iubenda.com/privacy-policy/57313695" class="iubenda-white iubenda-noiframe iubenda-embed">Privacy Policy</a>
                 &nbsp;·&nbsp;
-                <a href="https://www.iubenda.com/privacy-policy/57313695/cookie-policy" class="iubenda-white iubenda-noiframe iubenda-embed" title="Cookie Policy">Cookie Policy</a>
+                <a href="https://www.iubenda.com/privacy-policy/57313695/cookie-policy" class="iubenda-white iubenda-noiframe iubenda-embed">Cookie Policy</a>
                 &nbsp;·&nbsp;
-                <a href="https://www.iubenda.com/terms-and-conditions/57313695" class="iubenda-white iubenda-noiframe iubenda-embed" title="Terms and Conditions">Terms and Conditions</a>
+                <a href="https://www.iubenda.com/terms-and-conditions/57313695" class="iubenda-white iubenda-noiframe iubenda-embed">Terms and Conditions</a>
             </p>
         </div>
     </footer>
@@ -868,7 +878,8 @@ if (data.promoRedirectUrl) {
                 <div class="upload-icon">📄</div>
                 <p class="upload-text">Drop your document here</p>
                 <p class="upload-subtext">PDF or Word (.docx) accepted · max 10MB</p>
-                <input type="file" class="upload-input" id="fileInput" accept=".pdf,.docx">
+                <label for="fileInput" class="browse-button">Browse for a file</label>
+                <input type="file" style="display:none;" id="fileInput" accept=".pdf,.docx">
             `;
             uploadArea.style.display = '';
             uploadArea.onclick = () => document.getElementById('fileInput').click();
