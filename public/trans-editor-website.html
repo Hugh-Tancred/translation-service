@@ -545,7 +545,7 @@
                 <p>Trans-editor is built on twenty years of document handling experience. We use state-of-the-art AI to translate, and our own technology to reconstruct documents so that the result is usable, not just readable.</p>
                 <p>Fully automated, available around the clock. Your document is processed, translated, and returned to you—formatted—without any human handling.</p>
 
-                <div class="features">
+                <div class="features" aria-label="Service features">
                     <div class="feature">
                         <h3>Structure preserved</h3>
                         <p>Footnotes, numbered references, headings, and document layout are reconstructed in the output—not stripped away.</p>
@@ -647,7 +647,8 @@
                     <div class="upload-icon">📄</div>
                     <p class="upload-text">Drop your document here</p>
                     <p class="upload-subtext">PDF or Word (.docx) accepted · max 10MB</p>
-                    <input type="file" class="upload-input" id="fileInput" accept=".pdf,.docx">
+                    <label for="fileInput" class="browse-button">Browse for a file</label>
+                    <input type="file" style="display:none;" id="fileInput" accept=".pdf,.docx">
                 </div>
 
                 <div class="quote-result" id="quoteResult">
@@ -656,11 +657,13 @@
                     <p class="quote-price" id="quotePrice"></p>
                     <p class="quote-price-note" id="quotePriceNote"></p>
 
-                    <span class="output-format-label">Output format</span>
-                    <div class="output-format-options">
-                        <label><input type="radio" name="outputFormat" value="pdf" checked> PDF</label>
-                        <label><input type="radio" name="outputFormat" value="word"> Word (.docx)</label>
-                    </div>
+                    <fieldset style="border:none;padding:0;margin:0;">
+                        <legend class="output-format-label">Output format</legend>
+                        <div class="output-format-options">
+                            <label><input type="radio" name="outputFormat" value="pdf" checked> PDF</label>
+                            <label><input type="radio" name="outputFormat" value="word"> Word (.docx)</label>
+                        </div>
+                    </fieldset>
                     <div class="promo-option">
                         <input type="text" class="promo-input" id="promoInput" placeholder="Promo code (optional)">
                     </div>
