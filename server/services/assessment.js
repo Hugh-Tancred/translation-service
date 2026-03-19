@@ -57,7 +57,11 @@ function assessPdf(buffer) {
     const rawWords = countWords(readable);
     // PDF raw text extraction over-counts due to metadata/binary artifacts
     // Apply a conservative factor of 0.35
-    const wordCount = Math.max(Math.min(Math.round(rawWords * 0.05), Math.round(buffer.length / 500)), 100);
+    const isNative = rawWords > buffer.length / 2000;
+const factor = isNative ? 0.165 : 0.10;
+const cap = Math.round(buffer.length / 25);
+const wordCount = Math.max(Math.min(Math.round(rawWords * factor), cap), 100);
+console.log(`Assessment (PDF): native=${isNative} factor=${factor} raw=${rawWords} cap=${cap} result=${wordCount}`);
     console.log(`Assessment (PDF): ~${wordCount} words (raw: ${rawWords})`);
     return { wordCount };
   } catch (err) {
