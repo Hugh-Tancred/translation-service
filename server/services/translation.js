@@ -90,6 +90,15 @@ async function translateWithClaude(text, systemPrompt) {
       fullText += chunk.delta.text;
     }
   }
+
+  const finalMessage = await stream.finalMessage();
+  const usage = finalMessage.usage;
+  if (usage) {
+    const inputCost  = (usage.input_tokens  / 1_000_000) * 15;
+    const outputCost = (usage.output_tokens / 1_000_000) * 75;
+    console.log(`Tokens: in=${usage.input_tokens} out=${usage.output_tokens} cost=$${(inputCost + outputCost).toFixed(4)}`);
+  }
+
   return fullText;
 }
 
