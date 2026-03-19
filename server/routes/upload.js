@@ -29,7 +29,7 @@ router.post('/', upload.single('document'), async (req, res) => {
 await uploadFile(s3Key, req.file.buffer, mimeType);
 
     // Assess document complexity (MVP: returns 1)
-    const assessment = assessDocument(req.file.buffer, req.file.originalname);
+    const assessment = await assessDocument(req.file.buffer, req.file.originalname);
 const quote = generateQuote(assessment.wordCount);
 
     // Create order in database
