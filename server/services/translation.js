@@ -164,6 +164,16 @@ async function translateBodyText(text, sourceLanguage) {
         translated = await translateText(chunks[i], sourceLanguage);
         break;
       } catch (err) {
+        const isContentFilter = err.message && (
+          err.message.toLowerCase().includes('content') ||
+          err.message.toLowerCase().includes('safety') ||
+          err.message.toLowerCase().includes('policy')
+        );
+        if (isContentFilter) {
+          console.warn(`Translation: chunk ${i + 1} skipped — content filter (${err.message})`);
+          translated = '[Translation unavailable for this section]';
+          break;
+        }
         attempts++;
         if (attempts >= 3) throw err;
         console.log(`Translation: chunk ${i + 1} attempt ${attempts} failed (${err.message}), retrying in ${attempts * 10}s...`);
@@ -202,7 +212,22 @@ async function processTranslation(orderId, outputFormat = 'pdf') {
     const translatedFootnotes = [];
     for (const fn of (ocrResult.footnotes || [])) {
       console.log(`Translating footnote ${fn.number}...`);
-      const translatedContent = await translateText(fn.text, order.source_language, footnotePrompt);
+      let translatedContent;
+      try {
+        translatedContent = await translateText(fn.text, order.source_language, footnotePrompt);
+      } catch (err) {
+        const isContentFilter = err.message && (
+          err.message.toLowerCase().includes('content') ||
+          err.message.toLowerCase().includes('safety') ||
+          err.message.toLowerCase().includes('policy')
+        );
+        if (isContentFilter) {
+          console.warn(`Translation: footnote ${fn.number} skipped — content filter (${err.message})`);
+          translatedContent = '[Translation unavailable]';
+        } else {
+          throw err;
+        }
+      }
       translatedFootnotes.push({ number: fn.number, text: translatedContent });
     }
     console.log(`Translation complete: ${translatedFootnotes.length} footnotes translated`);
