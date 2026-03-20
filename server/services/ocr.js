@@ -22,7 +22,7 @@ function buildOcrPrompt(startPage, endPage, totalPages) {
 2. Preserve paragraph breaks with a blank line between paragraphs.
 3. IMPORTANT: Each numbered list item MUST be on its own line. Never put "1. text 2. text" on one line.
 4. IMPORTANT: Each bullet list item MUST be on its own line. Never inline them with " - " separators.
-5. Preserve bold section headings — prefix them with ### on their own line.
+5. Preserve bold section headings — prefix them with ##HEADING## on their own line, e.g. ##HEADING## Section Title
 6. Mark footnote reference numbers inline in the body text as [FN1] [FN2] etc.
 7. At the very end of your output, after a line containing only "---FOOTNOTES---", list each footnote as:
    FOOTNOTE 1: <full text of footnote 1>
@@ -31,7 +31,7 @@ function buildOcrPrompt(startPage, endPage, totalPages) {
 8. If there are no footnotes, do not include the ---FOOTNOTES--- section at all.
 9. For multi-column layouts (e.g. letter headers), transcribe left column first, then right column, each on separate lines.
 10. Do NOT include page numbers, decorative rules, or image descriptions.
-11. Output plain text only — no markdown formatting symbols except ### for headings and - for bullets.`;
+11. Output plain text only — no markdown formatting symbols except ##HEADING## for headings and - for bullets.`;
 }
 
 function parseTranscription(rawText) {
