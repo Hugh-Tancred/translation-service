@@ -33,8 +33,22 @@ const SUPERSCRIPT_MAP = {
 
 const TRANSLATION_CHUNK_CHARS = 6000;
 
+// If this proportion of chunks are untranslatable, treat as pipeline failure
+const SKIP_THRESHOLD = 0.30;
+
 function normalizeForPdf(text) {
   return text.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g, char => SUPERSCRIPT_MAP[char]);
+}
+
+function checkSkipThreshold(translatedText, totalChunks) {
+  if (totalChunks <= 1) return false; // Single-chunk docs: don't apply threshold
+  const skipCount = (translatedText.match(/\[Translation unavailable for this section\]/g) || []).length;
+  const skipRate = skipCount / totalChunks;
+  if (skipRate > SKIP_THRESHOLD) {
+    console.warn(`Translation: skip threshold exceeded — ${skipCount}/${totalChunks} chunks unavailable (${Math.round(skipRate * 100)}%)`);
+    return true;
+  }
+  return false;
 }
 
 function buildSystemPrompt(sourceLanguage) {
@@ -159,7 +173,7 @@ async function translateBodyText(text, sourceLanguage) {
 
   if (chunks.length === 1) {
     console.log(`Translation: single chunk (${text.length} chars)`);
-    return await translateText(text, sourceLanguage);
+    return { translatedText: await translateText(text, sourceLanguage), totalChunks: 1 };
   }
 
   console.log(`Translation: splitting body into ${chunks.length} chunks`);
@@ -192,7 +206,7 @@ async function translateBodyText(text, sourceLanguage) {
     translatedChunks.push(translated);
   }
   console.log(`Translation: all body chunks complete, reassembling...`);
-  return translatedChunks.join('\n\n');
+  return { translatedText: translatedChunks.join('\n\n'), totalChunks: chunks.length };
 }
 
 async function processTranslation(orderId, outputFormat = 'pdf') {
@@ -215,7 +229,12 @@ async function processTranslation(orderId, outputFormat = 'pdf') {
       console.log(`Translation: OCR delivered ${ocrResult.text.length} chars, ${ocrResult.footnotes.length} footnotes`);
     }
 
-    const translatedText = await translateBodyText(ocrResult.text, order.source_language);
+    const { translatedText, totalChunks } = await translateBodyText(ocrResult.text, order.source_language);
+
+    // Check if too many chunks were skipped — treat as pipeline failure
+    if (checkSkipThreshold(translatedText, totalChunks)) {
+      throw new Error('Translation quality threshold not met — too many sections unavailable');
+    }
 
     const footnotePrompt = buildFootnotePrompt(order.source_language);
     const translatedFootnotes = [];
@@ -284,3 +303,4 @@ async function processTranslation(orderId, outputFormat = 'pdf') {
 }
 
 module.exports = { translateText, processTranslation, SUPPORTED_LANGUAGES };
+```
