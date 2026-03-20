@@ -30,48 +30,62 @@ router.post('/', express.raw({ type: 'application/json' }), async (req, res) => 
       const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
       if (!order) throw new Error(`Order ${orderId} not found`);
 
-      // Mark as paid and save Stripe session ID for success page polling
+      // Synchronous DB updates — do these before replying to Stripe
       db.prepare('UPDATE orders SET status = ?, paid_at = CURRENT_TIMESTAMP WHERE id = ?')
         .run('paid', order.id);
       db.prepare('UPDATE orders SET stripe_session_id = ? WHERE id = ?')
         .run(session.id, order.id);
-
-      // Store payment intent ID so translation pipeline can capture or cancel
       if (session.payment_intent) {
         db.prepare('UPDATE orders SET payment_intent_id = ? WHERE id = ?')
           .run(session.payment_intent, order.id);
       }
 
-      await processTranslation(order.id, outputFormat);
-
-      const updatedOrder = db.prepare('SELECT * FROM orders WHERE id = ?').get(order.id);
-      const finalS3Key = (outputFormat === 'word')
-        ? updatedOrder.s3_key_word
-        : updatedOrder.s3_key_pdf;
-      const keyToUse = finalS3Key || updatedOrder.s3_key_translated;
-
-      const baseName = updatedOrder.original_filename.replace(/\.(pdf|docx)$/i, '');
-      const downloadName = outputFormat === 'word'
-        ? `${baseName}_EN.docx`
-        : `${baseName}_EN.pdf`;
-
-      const downloadUrl = await getPresignedUrl(keyToUse, 48 * 60 * 60, downloadName);
-
-      db.prepare('UPDATE orders SET status = ?, delivered_at = CURRENT_TIMESTAMP WHERE id = ?')
-        .run('delivered', order.id);
-
-      const emailToUse = deliveryEmail || updatedOrder.email;
-      if (emailToUse && emailToUse !== 'noemail@placeholder.com') {
-        const emailOrder = { ...updatedOrder, email: emailToUse };
-        sendDeliveryEmail(emailOrder, downloadUrl).catch(err => {
-          console.error(`Failed to send delivery email for order ${order.id}:`, err);
-        });
-      }
-
-      console.log(`Order ${order.id} completed and delivered via webhook`);
     } catch (err) {
-      console.error(`Webhook processing error for order ${orderId}:`, err);
+      console.error(`Webhook DB error for order ${orderId}:`, err);
     }
+
+    // Reply to Stripe immediately — before translation starts
+    res.json({ received: true });
+
+    // Run translation as detached background work — Stripe is no longer waiting
+    setImmediate(async () => {
+      try {
+        const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
+        await processTranslation(order.id, outputFormat);
+
+        const updatedOrder = db.prepare('SELECT * FROM orders WHERE id = ?').get(order.id);
+        const finalS3Key = (outputFormat === 'word')
+          ? updatedOrder.s3_key_word
+          : updatedOrder.s3_key_pdf;
+        const keyToUse = finalS3Key || updatedOrder.s3_key_translated;
+
+        const baseName = updatedOrder.original_filename.replace(/\.(pdf|docx)$/i, '');
+        const downloadName = outputFormat === 'word'
+          ? `${baseName}_EN.docx`
+          : `${baseName}_EN.pdf`;
+
+        const downloadUrl = await getPresignedUrl(keyToUse, 48 * 60 * 60, downloadName);
+
+        db.prepare('UPDATE orders SET status = ?, delivered_at = CURRENT_TIMESTAMP WHERE id = ?')
+          .run('delivered', order.id);
+
+        const emailToUse = deliveryEmail || updatedOrder.email;
+        if (emailToUse && emailToUse !== 'noemail@placeholder.com') {
+          const emailOrder = { ...updatedOrder, email: emailToUse };
+          sendDeliveryEmail(emailOrder, downloadUrl).catch(err => {
+            console.error(`Failed to send delivery email for order ${order.id}:`, err);
+          });
+        }
+
+        console.log(`Order ${order.id} completed and delivered via background processing`);
+      } catch (err) {
+        console.error(`Background translation error for order ${orderId}:`, err);
+        db.prepare('UPDATE orders SET status = ? WHERE id = ?')
+          .run('failed', orderId);
+      }
+    });
+
+    return; // Ensure nothing executes after the detached block
   }
 
   res.json({ received: true });
