@@ -21,6 +21,8 @@ async function createCheckoutSession(order, outputFormat, deliveryEmail) {
     },
     success_url: `${process.env.BASE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${process.env.BASE_URL}/cancel`,
+    automatic_tax: { enabled: true },
+    tax_id_collection: { enabled: true },
     metadata: {
       orderId: String(order.id),
       outputFormat: outputFormat || 'pdf',
