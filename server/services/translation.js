@@ -303,4 +303,3 @@ async function processTranslation(orderId, outputFormat = 'pdf') {
 }
 
 module.exports = { translateText, processTranslation, SUPPORTED_LANGUAGES };
-```
