@@ -12,7 +12,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Stripe webhook — must be before express.json()
-app.use('/webhook', webhookRoutes);
+app.use('/api/webhook', webhookRoutes);
 
 // Middleware
 app.use(express.json());
