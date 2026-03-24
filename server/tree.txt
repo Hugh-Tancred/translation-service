@@ -1,0 +1,34 @@
+Folder PATH listing
+Volume serial number is 7676-927F
+C:.
+³   index.js
+³   tree.txt
+³   
+ÃÄÄÄconfig
+³       database.js
+³       
+ÃÄÄÄmiddleware
+³       upload.js
+³       
+ÃÄÄÄroutes
+³       quote.js
+³       status.js
+³       upload.js
+³       webhook.js
+³       
+ÃÄÄÄservices
+³       assessment.js
+³       email.js
+³       ocr.js
+³       quotation.js
+³       scheduler.js
+³       storage.js
+³       stripe.js
+³       translation.js
+³       
+ÀÄÄÄutils
+        index.js
+        pdf.js
+        word.js
+        wordExtract.js
+        

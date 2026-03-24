@@ -213,6 +213,10 @@ async function processTranslation(orderId, outputFormat = 'pdf') {
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
   if (!order) throw new Error('Order not found');
 
+  // [MONITORING] Pipeline starting
+  const pipelineStart = Date.now();
+  console.log(`[PIPELINE_START] orderId=${orderId} file=${order.original_filename} lang=${order.source_language} outputFormat=${outputFormat}`);
+
   db.prepare('UPDATE orders SET status = ? WHERE id = ?').run('processing', orderId);
 
   try {
@@ -289,10 +293,17 @@ async function processTranslation(orderId, outputFormat = 'pdf') {
       await capturePayment(order.payment_intent_id);
     }
 
+    // [MONITORING] Pipeline completed successfully
+    const durationSec = ((Date.now() - pipelineStart) / 1000).toFixed(1);
+    console.log(`[PIPELINE_OK] orderId=${orderId} file=${order.original_filename} lang=${order.source_language} outputFormat=${outputFormat} chunks=${totalChunks} footnotes=${translatedFootnotes.length} durationSec=${durationSec}`);
+
     return { success: true, translatedKey };
 
   } catch (error) {
-    console.error(`Order ${orderId}: Translation pipeline failed:`, error.message);
+    // [MONITORING] Pipeline failure
+    const durationSec = ((Date.now() - pipelineStart) / 1000).toFixed(1);
+    console.error(`[PIPELINE_FAIL] orderId=${orderId} file=${order.original_filename} lang=${order.source_language} durationSec=${durationSec} error=${error.message}`);
+
     db.prepare('UPDATE orders SET status = ? WHERE id = ?').run('failed', orderId);
     // Cancel the authorised payment — customer should not be charged
     if (order.payment_intent_id) {

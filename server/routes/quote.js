@@ -50,6 +50,9 @@ router.post('/:orderId/accept', async (req, res) => {
       db.prepare('UPDATE orders SET status = ?, paid_at = CURRENT_TIMESTAMP WHERE id = ?')
         .run('paid', order.id);
 
+      // [MONITORING] Job accepted via promo code
+      console.log(`[QUOTE_ACCEPT_PROMO] orderId=${order.id} file=${order.original_filename} outputFormat=${outputFormat}`);
+
       // Fire translation in background — do not await
       processTranslation(order.id, outputFormat)
         .then(async () => {
@@ -95,10 +98,14 @@ router.post('/:orderId/accept', async (req, res) => {
 
     // PAID MODE: create Stripe Checkout session
     const session = await createCheckoutSession(order, outputFormat, deliveryEmail);
+
+    // [MONITORING] Job accepted via Stripe — checkout session created
+    console.log(`[QUOTE_ACCEPT_STRIPE] orderId=${order.id} file=${order.original_filename} amount=€${order.quote_amount} outputFormat=${outputFormat}`);
+
     res.json({ checkoutUrl: session.url });
 
   } catch (error) {
-    console.error('Accept quote error:', error);
+    console.error(`[QUOTE_ACCEPT_FAIL] orderId=${req.params.orderId} error=${error.message}`);
     res.status(500).json({ error: 'Failed to create payment session. Please try again.' });
   }
 });

@@ -26,11 +26,11 @@ router.post('/', upload.single('document'), async (req, res) => {
 
     // Upload to S3
     const mimeType = req.file.mimetype;
-await uploadFile(s3Key, req.file.buffer, mimeType);
+    await uploadFile(s3Key, req.file.buffer, mimeType);
 
     // Assess document complexity (MVP: returns 1)
     const assessment = await assessDocument(req.file.buffer, req.file.originalname);
-const quote = generateQuote(assessment.wordCount);
+    const quote = generateQuote(assessment.wordCount);
 
     // Create order in database
     const stmt = db.prepare(`
@@ -54,6 +54,9 @@ const quote = generateQuote(assessment.wordCount);
     // Send quote email
     await sendQuoteEmail(order);
 
+    // [MONITORING] Job created and quoted successfully
+    console.log(`[UPLOAD_OK] orderId=${orderId} file=${req.file.originalname} lang=${sourceLanguage || 'unspecified'} words=${assessment.wordCount} quote=€${quote.amount} fileSizeBytes=${req.file.size}`);
+
     res.json({
       success: true,
       orderId,
@@ -64,7 +67,8 @@ const quote = generateQuote(assessment.wordCount);
       }
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    // [MONITORING] Upload failure — file, email, S3, assessment or DB error
+    console.error(`[UPLOAD_FAIL] file=${req.file ? req.file.originalname : 'none'} error=${error.message}`);
 
     if (error.message === 'Only PDF files are allowed') {
       return res.status(400).json({ error: error.message });
