@@ -127,13 +127,14 @@ async function createWordFromText(translatedText, originalFilename, footnotes) {
       continue;
     }
 
-    // ── ##HEADING## → Heading 2, bold, centred ───────────────────────────────
+    // ── ##HEADING## → Heading 2, bold, left-aligned ──────────────────────────
+    // Note: document titles arrive via this tag from wordExtract.js.
+    // Centring is handled by the Roman numeral pattern detector below.
     if (para.startsWith('##HEADING## ')) {
       const text = para.slice(12).trim();
       docParagraphs.push(new Paragraph({
         children: buildChildren(text, footnoteMap, { bold: true, size: 28 }),
         heading: HeadingLevel.HEADING_2,
-        alignment: AlignmentType.CENTER,
         spacing: { before: 280, after: 120 }
       }));
       continue;
