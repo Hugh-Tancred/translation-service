@@ -49,10 +49,10 @@ const MARGIN_BOT   = 72;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
 
 // ─── Typography ───────────────────────────────────────────────────────────────
-const TITLE_SIZE       = 16;
-const SECTION_SIZE     = 13;
-const HEADING_SIZE     = 12;
-const CLAUSE_SIZE      = 11;
+const TITLE_SIZE       = 18;
+const SECTION_SIZE     = 14;
+const HEADING_SIZE     = 13;
+const CLAUSE_SIZE      = 12;
 const BODY_SIZE        = 11;
 const LISTITEM_SIZE    = 10;
 const FOOTNOTE_SIZE    = 8;
@@ -338,8 +338,9 @@ async function createPdfFromText(translatedText, originalFilename, footnotes) {
         fontSize:    HEADING_SIZE,
         lineHeight:  HEADING_LINE_HEIGHT,
         useFont:     fontBold,
-        spaceBefore: HEADING_LINE_HEIGHT * 1.2,
-        spaceAfter:  HEADING_LINE_HEIGHT * 0.4,
+        spaceBefore: HEADING_LINE_HEIGHT * 1.4,
+        spaceAfter:  HEADING_LINE_HEIGHT * 0.5,
+        centered:    true,
       });
       continue;
     }
