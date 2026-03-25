@@ -127,12 +127,13 @@ async function createWordFromText(translatedText, originalFilename, footnotes) {
       continue;
     }
 
-    // ── ##HEADING## → Heading 2, bold, clearly distinct from body ────────────
+    // ── ##HEADING## → Heading 2, bold, centred ───────────────────────────────
     if (para.startsWith('##HEADING## ')) {
       const text = para.slice(12).trim();
       docParagraphs.push(new Paragraph({
         children: buildChildren(text, footnoteMap, { bold: true, size: 28 }),
         heading: HeadingLevel.HEADING_2,
+        alignment: AlignmentType.CENTER,
         spacing: { before: 280, after: 120 }
       }));
       continue;
@@ -208,10 +209,11 @@ async function createWordFromText(translatedText, originalFilename, footnotes) {
       continue;
     }
 
-    // ── Sub-clause: "(1) The company is..." → indented body ──────────────────
+    // ── Sub-clause: "(1) The company is..." → indented, justified ───────────
     if (RE_SUBCLAUSE.test(para)) {
       docParagraphs.push(new Paragraph({
         children: buildChildren(para, footnoteMap, { size: 22 }),
+        alignment: AlignmentType.JUSTIFIED,
         indent: { left: convertInchesToTwip(0.4) },
         spacing: { after: 100 }
       }));
@@ -222,15 +224,17 @@ async function createWordFromText(translatedText, originalFilename, footnotes) {
     if (RE_SUBSUBCLAUSE.test(para)) {
       docParagraphs.push(new Paragraph({
         children: buildChildren(para, footnoteMap, { size: 22 }),
+        alignment: AlignmentType.JUSTIFIED,
         indent: { left: convertInchesToTwip(0.7) },
         spacing: { after: 100 }
       }));
       continue;
     }
 
-    // ── Standard paragraph ────────────────────────────────────────────────────
+    // ── Standard paragraph → justified ───────────────────────────────────────
     docParagraphs.push(new Paragraph({
       children: buildChildren(para, footnoteMap, { size: 22 }),
+      alignment: AlignmentType.JUSTIFIED,
       spacing: { after: 160 }
     }));
   }
