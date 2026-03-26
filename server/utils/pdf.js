@@ -12,8 +12,9 @@
  *
  * Body text conventions:
  *   ##TITLE##    → document title: large, bold font, centred
- *   ##HEADING##  → subheading: medium-large, bold font, left-aligned
+ *   ##HEADING##  → subheading: medium-large, bold font, centred
  *   ##LISTITEM## → reference list item, body size
+ *   | col | col  → markdown table → rendered as PDF table
  *   Inline [FN1] markers → superscript reference numbers
  *
  * Pattern-detected structure (no prefix required):
@@ -24,7 +25,7 @@
  *
  * Font requirement:
  *   Regular: fonts/LiberationSans-Regular.ttf  (required)
- *   Bold:    fonts/LiberationSans-Bold.ttf     (optional — degrades to regular if absent)
+ *   Bold:    fonts/LiberationSans-Bold.ttf     (optional — falls back to Helvetica-Bold)
  *   Install: apt install fonts-liberation
  */
 
@@ -55,6 +56,7 @@ const HEADING_SIZE     = 13;
 const CLAUSE_SIZE      = 12;
 const BODY_SIZE        = 11;
 const LISTITEM_SIZE    = 10;
+const TABLE_SIZE       = 9;
 const FOOTNOTE_SIZE    = 8;
 const SUPERSCRIPT_SIZE = 7;
 
@@ -80,7 +82,7 @@ const RE_CLAUSE_HEADING  = /^(\d+)\.\s{1,4}([A-ZÄÖÜ].*)/;
 const RE_SUBCLAUSE       = /^\(\d+\)\s+/;
 const RE_SUBSUBCLAUSE    = /^[a-z]\)\s+/;
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Module-level helpers (no page state needed) ──────────────────────────────
 
 function footnoteBlockHeight(footnotes, font) {
   if (!footnotes || footnotes.length === 0) return 0;
@@ -123,6 +125,26 @@ function parseInlineMarkers(text) {
   return parts;
 }
 
+function parseMarkdownTable(paragraphs, startIndex) {
+  const rows = [];
+  let i = startIndex;
+  while (i < paragraphs.length && paragraphs[i].startsWith('|')) {
+    const line = paragraphs[i];
+    // Skip separator rows e.g. |---|---|
+    if (/^\|[-| :]+\|$/.test(line)) {
+      i++;
+      continue;
+    }
+    const cells = line
+      .split('|')
+      .slice(1, -1)
+      .map(c => c.trim());
+    rows.push(cells);
+    i++;
+  }
+  return { rows, nextIndex: i };
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 async function extractText(pdfBuffer) {
@@ -137,7 +159,7 @@ async function extractText(pdfBuffer) {
 
 async function createPdfFromText(translatedText, originalFilename, footnotes) {
   footnotes = footnotes || [];
-  console.log('=== PDF.JS V3 EXECUTING - createPdfFromText called with', footnotes?.length || 0, 'footnotes ===');
+  console.log('=== PDF.JS V4 EXECUTING - createPdfFromText called with', footnotes?.length || 0, 'footnotes ===');
 
   // ── Load fonts ────────────────────────────────────────────────────────────
   let fontBytes;
@@ -217,9 +239,80 @@ async function createPdfFromText(translatedText, originalFilename, footnotes) {
     cursorY = bodyMaxY;
   }
 
+  // ── Table renderer ────────────────────────────────────────────────────────
+  function drawTable(rows) {
+    if (rows.length === 0) return;
+
+    const colCount  = Math.max(...rows.map(r => r.length));
+    const colWidth  = CONTENT_WIDTH / colCount;
+    const cellPadX  = 4;
+    const cellPadY  = 4;
+
+    // Calculate the height of each row based on its tallest cell
+    const rowHeights = rows.map((row, rowIndex) => {
+      const useFont  = rowIndex === 0 ? fontBold : font;
+      let maxLines   = 1;
+      for (let c = 0; c < colCount; c++) {
+        const cellText = row[c] || '';
+        const lines    = wrapText(cellText, useFont, TABLE_SIZE, colWidth - cellPadX * 2);
+        if (lines.length > maxLines) maxLines = lines.length;
+      }
+      return TABLE_SIZE * 1.4 * maxLines + cellPadY * 2;
+    });
+
+    const totalHeight = rowHeights.reduce((a, b) => a + b, 0);
+
+    // If the whole table fits on the current page, keep it together;
+    // otherwise start a new page
+    if (cursorY - totalHeight < bodyMinY) newPage();
+
+    for (let r = 0; r < rows.length; r++) {
+      const row       = rows[r];
+      const isHeader  = r === 0;
+      const useFont   = isHeader ? fontBold : font;
+      const rowHeight = rowHeights[r];
+      const rowBottom = cursorY - rowHeight;
+
+      for (let c = 0; c < colCount; c++) {
+        const cellX    = MARGIN_LEFT + c * colWidth;
+        const cellText = row[c] || '';
+
+        // Cell background and border
+        page.drawRectangle({
+          x:           cellX,
+          y:           rowBottom,
+          width:       colWidth,
+          height:      rowHeight,
+          borderColor: rgb(0.6, 0.6, 0.6),
+          borderWidth: 0.5,
+          color:       isHeader ? rgb(0.93, 0.93, 0.93) : rgb(1, 1, 1),
+        });
+
+        // Cell text
+        const maxCellWidth = colWidth - cellPadX * 2;
+        const lines        = wrapText(cellText, useFont, TABLE_SIZE, maxCellWidth);
+        let textY          = cursorY - cellPadY - TABLE_SIZE;
+        for (const line of lines) {
+          page.drawText(line, {
+            x:    cellX + cellPadX,
+            y:    textY,
+            size: TABLE_SIZE,
+            font: useFont,
+            color: rgb(0, 0, 0),
+          });
+          textY -= TABLE_SIZE * 1.4;
+        }
+      }
+
+      cursorY     = rowBottom;
+      isFirstPage = false;
+    }
+
+    // Space after table
+    cursorY -= LINE_HEIGHT * 0.6;
+  }
+
   // ── Generic line renderer ─────────────────────────────────────────────────
-  // Wraps text, draws it, advances cursorY. Returns nothing.
-  // spaceBefore / spaceAfter are extra vertical gaps in points.
   function drawParagraph(text, opts) {
     const {
       fontSize    = BODY_SIZE,
@@ -232,13 +325,11 @@ async function createPdfFromText(translatedText, originalFilename, footnotes) {
       centered    = false,
     } = opts || {};
 
-    // Space before paragraph (not at very top of page)
     if (!isFirstPage && spaceBefore > 0) {
       cursorY -= spaceBefore;
       if (cursorY < bodyMinY) newPage();
     }
 
-    // Parse inline footnote markers
     const segments = parseInlineMarkers(text);
     const tokens = [];
     for (const seg of segments) {
@@ -251,7 +342,6 @@ async function createPdfFromText(translatedText, originalFilename, footnotes) {
       }
     }
 
-    // Wrap into lines
     const lineTokens = [];
     let currentLine  = [];
     let currentWidth = 0;
@@ -272,11 +362,9 @@ async function createPdfFromText(translatedText, originalFilename, footnotes) {
     }
     if (currentLine.length) lineTokens.push(currentLine);
 
-    // Draw each line
     for (const lineArr of lineTokens) {
       if (cursorY < bodyMinY) newPage();
 
-      // For centred lines, measure total width first
       let lineWidth = 0;
       if (centered) {
         for (let ti = 0; ti < lineArr.length; ti++) {
@@ -309,7 +397,6 @@ async function createPdfFromText(translatedText, originalFilename, footnotes) {
       isFirstPage = false;
     }
 
-    // Space after paragraph
     if (spaceAfter > 0) {
       cursorY -= spaceAfter;
       if (cursorY < bodyMinY) newPage();
@@ -317,7 +404,17 @@ async function createPdfFromText(translatedText, originalFilename, footnotes) {
   }
 
   // ── Draw body paragraphs ─────────────────────────────────────────────────
-  for (const para of paragraphs) {
+  let i = 0;
+  while (i < paragraphs.length) {
+    const para = paragraphs[i];
+
+    // ── Markdown table ────────────────────────────────────────────────────────
+    if (para.startsWith('|')) {
+      const { rows, nextIndex } = parseMarkdownTable(paragraphs, i);
+      i = nextIndex;
+      drawTable(rows);
+      continue;
+    }
 
     // ── ##TITLE## ────────────────────────────────────────────────────────────
     if (para.startsWith('##TITLE## ')) {
@@ -330,6 +427,7 @@ async function createPdfFromText(translatedText, originalFilename, footnotes) {
         spaceAfter:  TITLE_LINE_HEIGHT * 0.6,
         centered:    true,
       });
+      i++;
       continue;
     }
 
@@ -344,6 +442,7 @@ async function createPdfFromText(translatedText, originalFilename, footnotes) {
         spaceAfter:  HEADING_LINE_HEIGHT * 0.5,
         centered:    true,
       });
+      i++;
       continue;
     }
 
@@ -355,6 +454,7 @@ async function createPdfFromText(translatedText, originalFilename, footnotes) {
         lineHeight:  LISTITEM_SIZE * 1.4,
         spaceAfter:  4,
       });
+      i++;
       continue;
     }
 
@@ -368,13 +468,13 @@ async function createPdfFromText(translatedText, originalFilename, footnotes) {
         spaceAfter:  SECTION_LINE_HEIGHT * 0.3,
         centered:    true,
       });
+      i++;
       continue;
     }
 
     // ── Roman numeral section with inline title: "I. General Provisions" ──────
     const romanMatch = para.match(RE_ROMAN_WITH_TEXT);
     if (romanMatch) {
-      // Draw numeral and title as a single centred bold line
       drawParagraph(romanMatch[1] + '.  ' + romanMatch[2], {
         fontSize:    SECTION_SIZE,
         lineHeight:  SECTION_LINE_HEIGHT,
@@ -383,6 +483,7 @@ async function createPdfFromText(translatedText, originalFilename, footnotes) {
         spaceAfter:  SECTION_LINE_HEIGHT * 0.3,
         centered:    true,
       });
+      i++;
       continue;
     }
 
@@ -396,28 +497,31 @@ async function createPdfFromText(translatedText, originalFilename, footnotes) {
         spaceBefore: LINE_HEIGHT * 1.0,
         spaceAfter:  LINE_HEIGHT * 0.3,
       });
+      i++;
       continue;
     }
 
     // ── Sub-clause: "(1) The company is..." ───────────────────────────────────
     if (RE_SUBCLAUSE.test(para)) {
       drawParagraph(para, {
-        leftMargin: MARGIN_LEFT + INDENT_SUBCLAUSE,
-        maxWidth:   CONTENT_WIDTH - INDENT_SUBCLAUSE,
+        leftMargin:  MARGIN_LEFT + INDENT_SUBCLAUSE,
+        maxWidth:    CONTENT_WIDTH - INDENT_SUBCLAUSE,
         spaceBefore: LINE_HEIGHT * 0.2,
         spaceAfter:  LINE_HEIGHT * 0.3,
       });
+      i++;
       continue;
     }
 
     // ── Sub-sub-clause: "a) From the liquidation..." ──────────────────────────
     if (RE_SUBSUBCLAUSE.test(para)) {
       drawParagraph(para, {
-        leftMargin: MARGIN_LEFT + INDENT_SUBSUBCLAUSE,
-        maxWidth:   CONTENT_WIDTH - INDENT_SUBSUBCLAUSE,
+        leftMargin:  MARGIN_LEFT + INDENT_SUBSUBCLAUSE,
+        maxWidth:    CONTENT_WIDTH - INDENT_SUBSUBCLAUSE,
         spaceBefore: LINE_HEIGHT * 0.2,
         spaceAfter:  LINE_HEIGHT * 0.3,
       });
+      i++;
       continue;
     }
 
@@ -426,6 +530,7 @@ async function createPdfFromText(translatedText, originalFilename, footnotes) {
       spaceBefore: LINE_HEIGHT * 0.4,
       spaceAfter:  LINE_HEIGHT * 0.3,
     });
+    i++;
   }
 
   // Draw footnotes on final page
