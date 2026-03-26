@@ -260,13 +260,8 @@ async function createPdfFromText(translatedText, originalFilename, footnotes) {
       return TABLE_SIZE * 1.4 * maxLines + cellPadY * 2;
     });
 
-    const totalHeight = rowHeights.reduce((a, b) => a + b, 0);
-
-    // If the whole table fits on the current page, keep it together;
-    // otherwise start a new page
-    if (cursorY - totalHeight < bodyMinY) newPage();
-
     for (let r = 0; r < rows.length; r++) {
+      if (cursorY - rowHeights[r] < bodyMinY) newPage();
       const row       = rows[r];
       const isHeader  = r === 0;
       const useFont   = isHeader ? fontBold : font;
