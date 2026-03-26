@@ -132,9 +132,11 @@ async function createWordFromText(translatedText, originalFilename, footnotes) {
     // Centring is handled by the Roman numeral pattern detector below.
     if (para.startsWith('##HEADING## ')) {
       const text = para.slice(12).trim();
+      const isRoman = RE_ROMAN_SECTION.test(text) || RE_ROMAN_WITH_TEXT.test(text);
       docParagraphs.push(new Paragraph({
         children: buildChildren(text, footnoteMap, { bold: true, size: 28 }),
         heading: HeadingLevel.HEADING_2,
+        alignment: isRoman ? AlignmentType.CENTER : AlignmentType.LEFT,
         spacing: { before: 280, after: 120 }
       }));
       continue;

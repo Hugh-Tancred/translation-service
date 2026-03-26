@@ -154,13 +154,15 @@ async function createPdfFromText(translatedText, originalFilename, footnotes) {
   try {
     fontBoldBytes = fs.readFileSync(FONT_BOLD_PATH);
   } catch (e) {
-    console.warn('pdf.js: Bold font not found at', FONT_BOLD_PATH, '— headings will use regular weight');
+    console.warn('pdf.js: Bold font not found at', FONT_BOLD_PATH, '— falling back to Helvetica-Bold');
   }
 
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
   const font     = await pdfDoc.embedFont(fontBytes);
-  const fontBold = fontBoldBytes ? await pdfDoc.embedFont(fontBoldBytes) : font;
+  const fontBold = fontBoldBytes
+    ? await pdfDoc.embedFont(fontBoldBytes)
+    : await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   pdfDoc.setTitle(originalFilename || 'Translation');
   pdfDoc.setCreator('TranslationService');
