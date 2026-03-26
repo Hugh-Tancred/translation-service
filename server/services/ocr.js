@@ -30,8 +30,17 @@ function buildOcrPrompt(startPage, endPage, totalPages) {
    etc.
 8. If there are no footnotes, do not include the ---FOOTNOTES--- section at all.
 9. For multi-column layouts (e.g. letter headers), transcribe left column first, then right column, each on separate lines.
-10. Do NOT include page numbers, decorative rules, or image descriptions.
-11. Output plain text only — no markdown formatting symbols except ##HEADING## for headings and - for bullets.`;
+10. For tables: render them using markdown table syntax with pipe characters.
+    Use a header row and separator row even if the original has no visible header.
+    Example:
+    | Column A | Column B | Column C |
+    |----------|----------|----------|
+    | value 1  | value 2  | value 3  |
+    If a table has paired columns in two languages (e.g. German | English side by side),
+    output only the left-hand (source language) column — ignore the right-hand column entirely.
+    Never linearise table content — never run cell values together as prose or separate lines.
+11. Do NOT include page numbers, decorative rules, or image descriptions.
+12. Output plain text only — no markdown formatting symbols except ##HEADING## for headings and - for bullets.`;
 }
 
 function parseTranscription(rawText) {

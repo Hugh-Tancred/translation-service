@@ -12,6 +12,7 @@
  *   ##LISTITEM## → Reference list item (already numbered by wordExtract)
  *   ### text     → Heading 3 (markdown fallback)
  *   - text       → Bullet point
+ *   | col | col  → Markdown table → rendered as Word table
  *   Inline [FN1] markers → Word footnote references
  *
  * Pattern-detected structure (no prefix required):
@@ -30,30 +31,20 @@ const {
   HeadingLevel,
   AlignmentType,
   convertInchesToTwip,
+  Table,
+  TableRow,
+  TableCell,
+  WidthType,
+  BorderStyle,
 } = require('docx');
 
 // ─── Structural pattern detectors ────────────────────────────────────────────
 
-// Roman numeral section title: line is ONLY a roman numeral + optional period
-// e.g. "I.", "II.", "III.", "IV.", "V."
-// Followed on the next paragraph by the section title text — but we handle
-// each paragraph independently, so we detect the combined form too:
-// "I.\nGeneral Provisions" may arrive as two paras OR as "I. General Provisions"
-const RE_ROMAN_SECTION = /^((?:X{0,3})(IX|IV|V?I{0,3}))\.?\s*$/i;
-
-// Roman numeral section title with inline text: "I. General Provisions"
+const RE_ROMAN_SECTION   = /^((?:X{0,3})(IX|IV|V?I{0,3}))\.?\s*$/i;
 const RE_ROMAN_WITH_TEXT = /^((?:X{0,3})(?:IX|IV|V?I{0,3}))\.\s+(.+)$/i;
-
-// Numbered clause heading: "1.  Company Name, Registered Office..."
-// Distinguished from sub-clause "(1)" by the absence of parentheses.
-// We require the text after the number to start with a capital letter.
-const RE_CLAUSE_HEADING = /^(\d+)\.\s{1,4}([A-ZÄÖÜ].*)$/;
-
-// Sub-clause: "(1) The company is..."
-const RE_SUBCLAUSE = /^\((\d+)\)\s+/;
-
-// Sub-sub-clause: "a) From the liquidation..."
-const RE_SUBSUBCLAUSE = /^([a-z])\)\s+/;
+const RE_CLAUSE_HEADING  = /^(\d+)\.\s{1,4}([A-ZÄÖÜ].*)$/;
+const RE_SUBCLAUSE       = /^\((\d+)\)\s+/;
+const RE_SUBSUBCLAUSE    = /^([a-z])\)\s+/;
 
 // ─── Inline marker parser ─────────────────────────────────────────────────────
 
@@ -82,6 +73,32 @@ function buildChildren(text, footnoteMap, runOptions) {
     }
   }
   return children;
+}
+
+// ─── Table parser ─────────────────────────────────────────────────────────────
+
+function isTableBlock(paragraphs, startIndex) {
+  return paragraphs[startIndex] && paragraphs[startIndex].startsWith('|');
+}
+
+function parseMarkdownTable(paragraphs, startIndex) {
+  const rows = [];
+  let i = startIndex;
+  while (i < paragraphs.length && paragraphs[i].startsWith('|')) {
+    const line = paragraphs[i];
+    // Skip separator rows e.g. |---|---|
+    if (/^\|[-| :]+\|$/.test(line)) {
+      i++;
+      continue;
+    }
+    const cells = line
+      .split('|')
+      .slice(1, -1)
+      .map(c => c.trim());
+    rows.push(cells);
+    i++;
+  }
+  return { rows, nextIndex: i };
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
@@ -113,7 +130,55 @@ async function createWordFromText(translatedText, originalFilename, footnotes) {
 
   const docParagraphs = [];
 
-  for (const para of paragraphs) {
+  let i = 0;
+  while (i < paragraphs.length) {
+    const para = paragraphs[i];
+
+    // ── Markdown table ────────────────────────────────────────────────────────
+    if (isTableBlock(paragraphs, i)) {
+      const { rows, nextIndex } = parseMarkdownTable(paragraphs, i);
+      i = nextIndex;
+
+      if (rows.length === 0) continue;
+
+      const colCount = Math.max(...rows.map(r => r.length));
+      const tableWidth = 9026; // A4 content width in DXA
+      const colWidth = Math.floor(tableWidth / colCount);
+
+      const border = { style: BorderStyle.SINGLE, size: 1, color: '999999' };
+      const borders = { top: border, bottom: border, left: border, right: border };
+
+      const tableRows = rows.map((row, rowIndex) => {
+        const isHeader = rowIndex === 0;
+        const cells = [];
+        for (let c = 0; c < colCount; c++) {
+          const cellText = row[c] || '';
+          cells.push(new TableCell({
+            borders,
+            width: { size: colWidth, type: WidthType.DXA },
+            margins: { top: 80, bottom: 80, left: 120, right: 120 },
+            children: [new Paragraph({
+              children: [new TextRun({
+                text: cellText,
+                bold: isHeader,
+                size: 20,
+              })]
+            })]
+          }));
+        }
+        return new TableRow({ children: cells });
+      });
+
+      docParagraphs.push(new Table({
+        width: { size: tableWidth, type: WidthType.DXA },
+        columnWidths: Array(colCount).fill(colWidth),
+        rows: tableRows,
+      }));
+
+      // Spacing after table
+      docParagraphs.push(new Paragraph({ spacing: { after: 160 } }));
+      continue;
+    }
 
     // ── ##TITLE## → Heading 1, bold, large, centred ──────────────────────────
     if (para.startsWith('##TITLE## ')) {
@@ -124,12 +189,11 @@ async function createWordFromText(translatedText, originalFilename, footnotes) {
         alignment: AlignmentType.CENTER,
         spacing: { before: 360, after: 160 }
       }));
+      i++;
       continue;
     }
 
-    // ── ##HEADING## → Heading 2, bold, left-aligned ──────────────────────────
-    // Note: document titles arrive via this tag from wordExtract.js.
-    // Centring is handled by the Roman numeral pattern detector below.
+    // ── ##HEADING## → Heading 2, bold, left-aligned or centred if Roman ──────
     if (para.startsWith('##HEADING## ')) {
       const text = para.slice(12).trim();
       const isRoman = RE_ROMAN_SECTION.test(text) || RE_ROMAN_WITH_TEXT.test(text);
@@ -139,6 +203,7 @@ async function createWordFromText(translatedText, originalFilename, footnotes) {
         alignment: isRoman ? AlignmentType.CENTER : AlignmentType.LEFT,
         spacing: { before: 280, after: 120 }
       }));
+      i++;
       continue;
     }
 
@@ -149,6 +214,7 @@ async function createWordFromText(translatedText, originalFilename, footnotes) {
         children: buildChildren(text, footnoteMap, { size: 20 }),
         spacing: { after: 60 }
       }));
+      i++;
       continue;
     }
 
@@ -160,6 +226,7 @@ async function createWordFromText(translatedText, originalFilename, footnotes) {
         heading: HeadingLevel.HEADING_3,
         spacing: { before: 240, after: 100 }
       }));
+      i++;
       continue;
     }
 
@@ -171,6 +238,7 @@ async function createWordFromText(translatedText, originalFilename, footnotes) {
         bullet: { level: 0 },
         spacing: { after: 100 }
       }));
+      i++;
       continue;
     }
 
@@ -181,13 +249,13 @@ async function createWordFromText(translatedText, originalFilename, footnotes) {
         alignment: AlignmentType.CENTER,
         spacing: { before: 320, after: 80 }
       }));
+      i++;
       continue;
     }
 
     // ── Roman numeral section title with inline text: "I. General Provisions" ─
     const romanMatch = para.match(RE_ROMAN_WITH_TEXT);
     if (romanMatch) {
-      // Render as two runs: numeral bold + title bold, centred
       docParagraphs.push(new Paragraph({
         children: [
           new TextRun({ text: romanMatch[1] + '.  ', bold: true, size: 26 }),
@@ -196,6 +264,7 @@ async function createWordFromText(translatedText, originalFilename, footnotes) {
         alignment: AlignmentType.CENTER,
         spacing: { before: 320, after: 80 }
       }));
+      i++;
       continue;
     }
 
@@ -209,6 +278,7 @@ async function createWordFromText(translatedText, originalFilename, footnotes) {
         ],
         spacing: { before: 240, after: 80 }
       }));
+      i++;
       continue;
     }
 
@@ -220,6 +290,7 @@ async function createWordFromText(translatedText, originalFilename, footnotes) {
         indent: { left: convertInchesToTwip(0.4) },
         spacing: { after: 100 }
       }));
+      i++;
       continue;
     }
 
@@ -231,6 +302,7 @@ async function createWordFromText(translatedText, originalFilename, footnotes) {
         indent: { left: convertInchesToTwip(0.7) },
         spacing: { after: 100 }
       }));
+      i++;
       continue;
     }
 
@@ -240,6 +312,7 @@ async function createWordFromText(translatedText, originalFilename, footnotes) {
       alignment: AlignmentType.JUSTIFIED,
       spacing: { after: 160 }
     }));
+    i++;
   }
 
   const doc = new Document({
