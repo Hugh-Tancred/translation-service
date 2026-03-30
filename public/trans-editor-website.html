@@ -852,16 +852,47 @@
     }
     throw new Error(data.error || 'Upload failed');
 }
-                currentOrderId = data.orderId;
+currentOrderId = data.orderId;
 
-                document.getElementById('fileName').textContent = file.name;
-                document.getElementById('fileDetails').textContent = 'Document uploaded successfully';
-                document.getElementById('quotePrice').textContent = `€${data.quote.amount.toFixed(2)}`;
-                document.getElementById('quotePriceNote').textContent = 'Exact price for your document · charged by card on translation';
+document.getElementById('fileName').textContent = file.name;
+document.getElementById('fileDetails').textContent = 'Document uploaded successfully';
+document.getElementById('quotePrice').textContent = `€${data.quote.amount.toFixed(2)}`;
+document.getElementById('quotePriceNote').textContent = 'Exact price for your document · charged by card on translation';
 
-                quoteResult.classList.add('visible');
-                uploadArea.style.display = 'none';
-                quoteResult.scrollIntoView({ behavior: 'smooth', block: 'center' });
+// Soft flag warning — inject above ack checkbox if flagged
+const existingFlag = document.getElementById('preflightFlag');
+if (existingFlag) existingFlag.remove();
+const flagCheckbox = document.getElementById('flagCheckbox');
+if (flagCheckbox) flagCheckbox.remove();
+
+if (data.preflight && data.preflight.flagged) {
+    const ackOption = document.querySelector('.ack-option');
+    const flagHtml = `
+        <div id="preflightFlag" style="
+            background: #fdf6e3;
+            border: 1px solid #c8a84b;
+            border-radius: 6px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+            text-align: left;
+        ">
+            <p style="color: #7a5c00; font-size: 0.95rem; margin-bottom: 0.75rem; line-height: 1.55;">
+                <strong style="display:block; margin-bottom:0.3rem;">This document contains images or non-text elements</strong>
+                ${data.preflight.message}
+            </p>
+            <label style="display:flex; align-items:flex-start; gap:0.5rem; color:#5a4200; font-size:0.9rem; cursor:pointer;">
+                <input type="checkbox" id="flagCheckbox" style="margin-top:3px; flex-shrink:0;">
+                I understand that images and design elements will not be included in my translation.
+            </label>
+        </div>
+    `;
+    ackOption.insertAdjacentHTML('beforebegin', flagHtml);
+    document.getElementById('flagCheckbox').addEventListener('change', updatePayButton);
+}
+
+quoteResult.classList.add('visible');
+uploadArea.style.display = 'none';
+quoteResult.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
             } catch (error) {
     if (error.message && error.isPreflight) {
@@ -886,9 +917,13 @@
         emailCheckbox.addEventListener('change', () => {
             emailWrapper.classList.toggle('visible', emailCheckbox.checked);
         });
-        ackCheckbox.addEventListener('change', () => {
-            payButton.disabled = !ackCheckbox.checked;
-        });
+        function updatePayButton() {
+    const ack = document.getElementById('ackCheckbox').checked;
+    const flag = document.getElementById('flagCheckbox');
+    payButton.disabled = !(ack && (!flag || flag.checked));
+}
+
+ackCheckbox.addEventListener('change', updatePayButton);
 
         // ── Pay / translate ────────────────────────────────────────────────────
 
