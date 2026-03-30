@@ -69,6 +69,11 @@ router.post('/', upload.single('document'), async (req, res) => {
     // [MONITORING] Job created and quoted successfully
     console.log(`[UPLOAD_OK] orderId=${orderId} file=${req.file.originalname} lang=${sourceLanguage || 'unspecified'} words=${assessment.wordCount} quote=€${quote.amount} fileSizeBytes=${req.file.size}`);
 
+    // Include soft flag in response if present
+    const preflightResponse = preflight.decision === 'flag'
+      ? { flagged: true, message: preflight.reason }
+      : { flagged: false };
+
     res.json({
       success: true,
       orderId,
@@ -76,7 +81,8 @@ router.post('/', upload.single('document'), async (req, res) => {
       quote: {
         amount: quote.amount,
         currency: quote.currency
-      }
+      },
+      preflight: preflightResponse
     });
   } catch (error) {
     // [MONITORING] Upload failure — file, email, S3, assessment or DB error

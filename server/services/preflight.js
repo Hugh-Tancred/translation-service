@@ -6,6 +6,8 @@
  *
  * Decisions:
  *   'proceed' — document appears suitable for translation
+ *   'flag'    — document is translatable but contains significant non-text content;
+ *               user should be warned before proceeding
  *   'decline' — document is unsuitable; do not process or charge
  *
  * Hard decline triggers (any one is sufficient):
@@ -16,19 +18,26 @@
  *   3. Scanned PDF with very high short-token ratio
  *      (OCR of a form produces mostly short tokens)
  *
+ * Soft flag triggers:
+ *   1. PDF with text-to-size ratio in the middle band — enough text to translate
+ *      but significant non-text content present (images, graphics, design elements)
+ *
  * Bias: deliberately defensive. Better to decline a translatable document
  * than to accept one that produces unusable output.
  *
  * Returns:
- *   { decision: 'proceed' | 'decline', reason: string, signals: object }
+ *   { decision: 'proceed' | 'flag' | 'decline', reason: string, signals: object }
  */
 
 // Thresholds — adjust based on real-world testing
 const THRESHOLDS = {
-  // Below this text-to-size ratio, document is considered image/form heavy
-  LOW_TEXT_RATIO: 0.02,
   // Below this, document is considered near-empty of extractable text
   VERY_LOW_TEXT_RATIO: 0.005,
+  // Below this, document is considered image/form heavy — hard decline zone
+  LOW_TEXT_RATIO: 0.02,
+  // Below this, document has significant non-text content but is still translatable
+  // soft flag zone sits between LOW_TEXT_RATIO and MEDIUM_TEXT_RATIO
+  MEDIUM_TEXT_RATIO: 0.08,
   // Above this short-token ratio, document is considered form-like
   HIGH_SHORT_TOKEN_RATIO: 0.65,
 };
@@ -52,7 +61,6 @@ function preflightCheck(assessment, filename) {
   };
 
   // Word documents: only decline if short-token ratio is extremely high
-  // (Word forms are less common but do exist)
   if (extractionMethod === 'word') {
     if (shortTokenRatio !== null && shortTokenRatio > THRESHOLDS.HIGH_SHORT_TOKEN_RATIO) {
       const reason = 'Document appears to be a structured form. Form documents cannot be reliably translated as the layout carries meaning that cannot be preserved in translation.';
@@ -91,6 +99,17 @@ function preflightCheck(assessment, filename) {
     const reason = 'This document appears to be a scanned form. Form documents cannot be reliably translated as the layout carries meaning that cannot be preserved in translation.';
     console.log(`[PREFLIGHT_DECLINE] method=scanned shortTokenRatio=${shortTokenRatio.toFixed(2)} file=${filename}`);
     return { decision: 'decline', reason, signals };
+  }
+
+  // PDF: middle band — translatable but significant non-text content present
+  if (
+    textToSizeRatio !== null &&
+    textToSizeRatio < THRESHOLDS.MEDIUM_TEXT_RATIO &&
+    extractionMethod === 'native'
+  ) {
+    const reason = 'This document contains images or non-text elements. These will not appear in the translation — the translated text will be complete, but the visual layout may differ from the original.';
+    console.log(`[PREFLIGHT_FLAG] method=${extractionMethod} textToSizeRatio=${textToSizeRatio.toFixed(4)} shortTokenRatio=${shortTokenRatio !== null ? shortTokenRatio.toFixed(2) : 'null'} file=${filename}`);
+    return { decision: 'flag', reason, signals };
   }
 
   // All checks passed
