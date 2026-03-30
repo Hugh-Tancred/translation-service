@@ -4,6 +4,7 @@ const db = require('../config/database');
 const upload = require('../middleware/upload');
 const { uploadFile } = require('../services/storage');
 const { assessDocument } = require('../services/assessment');
+const { preflightCheck } = require('../services/preflight');
 const { generateQuote } = require('../services/quotation');
 const { sendQuoteEmail } = require('../services/email');
 
@@ -28,8 +29,19 @@ router.post('/', upload.single('document'), async (req, res) => {
     const mimeType = req.file.mimetype;
     await uploadFile(s3Key, req.file.buffer, mimeType);
 
-    // Assess document complexity (MVP: returns 1)
+    // Assess document
     const assessment = await assessDocument(req.file.buffer, req.file.originalname);
+
+    // Pre-flight check — hard decline before quote or order creation
+    const preflight = preflightCheck(assessment, req.file.originalname);
+    if (preflight.decision === 'decline') {
+      console.log(`[PREFLIGHT_DECLINE_RESPONSE] orderId=${orderId} file=${req.file.originalname} reason="${preflight.reason}"`);
+      return res.status(422).json({
+        error: 'preflight_decline',
+        message: preflight.reason
+      });
+    }
+
     const quote = generateQuote(assessment.wordCount);
 
     // Create order in database
@@ -44,7 +56,7 @@ router.post('/', upload.single('document'), async (req, res) => {
       req.file.originalname,
       sourceLanguage || 'European Language',
       s3Key,
-      assessment.complexityScore,
+      assessment.wordCount,
       quote.amount
     );
 

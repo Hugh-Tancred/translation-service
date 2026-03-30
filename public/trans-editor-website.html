@@ -844,8 +844,12 @@
                 const response = await fetch('/api/upload', { method: 'POST', body: formData });
                 const data = await response.json();
 
-                if (!response.ok) throw new Error(data.error || 'Upload failed');
-
+                if (!response.ok) {
+    if (data.error === 'preflight_decline') {
+        throw new Error(data.message);
+    }
+    throw new Error(data.error || 'Upload failed');
+}
                 currentOrderId = data.orderId;
 
                 document.getElementById('fileName').textContent = file.name;
