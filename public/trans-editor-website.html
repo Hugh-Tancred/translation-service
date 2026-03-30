@@ -846,7 +846,9 @@
 
                 if (!response.ok) {
     if (data.error === 'preflight_decline') {
-        throw new Error(data.message);
+        const err = new Error(data.message);
+        err.isPreflight = true;
+        throw err;
     }
     throw new Error(data.error || 'Upload failed');
 }
@@ -862,9 +864,21 @@
                 quoteResult.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
             } catch (error) {
-                resetUploadArea();
-                alert('Failed to upload document: ' + error.message);
-            }
+    if (error.message && error.isPreflight) {
+        uploadArea.style.display = '';
+        uploadArea.innerHTML = `
+            <div style="padding: 2rem 1.5rem; text-align: center;">
+                <div style="font-size: 2rem; margin-bottom: 1rem; color: var(--accent);">◎</div>
+                <h3 style="font-family: 'Libre Baskerville', Georgia, serif; font-weight: 400; font-size: 1.2rem; margin-bottom: 0.75rem; color: var(--text-primary);">This document cannot be translated</h3>
+                <p style="color: var(--text-secondary); font-size: 0.95rem; max-width: 420px; margin: 0 auto 1.5rem; line-height: 1.6;">${error.message}</p>
+                <button onclick="resetUploadArea()" class="cta-button" style="font-size: 0.95rem; padding: 0.75rem 2rem;">Try another document</button>
+            </div>
+        `;
+    } else {
+        resetUploadArea();
+        alert('Failed to upload document: ' + error.message);
+    }
+}
         }
 
         // ── Email toggle ───────────────────────────────────────────────────────
