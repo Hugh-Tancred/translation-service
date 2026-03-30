@@ -65,7 +65,7 @@ function preflightCheck(assessment, filename) {
 
   // PDF: near-empty text extraction — almost certainly image or form
   if (textToSizeRatio !== null && textToSizeRatio < THRESHOLDS.VERY_LOW_TEXT_RATIO) {
-    const reason = 'This document contains very little extractable text. It may be a scanned image, a structured form, or a design-heavy document that cannot be reliably translated. Please contact us if you believe this is an error.';
+    const reason = 'This document contains very little extractable text. It may be a scanned image, a structured form, or a design-heavy document that cannot be reliably translated.';
     console.log(`[PREFLIGHT_DECLINE] method=${extractionMethod} textToSizeRatio=${textToSizeRatio.toFixed(4)} file=${filename}`);
     return { decision: 'decline', reason, signals };
   }
@@ -77,7 +77,7 @@ function preflightCheck(assessment, filename) {
     shortTokenRatio !== null &&
     shortTokenRatio > THRESHOLDS.HIGH_SHORT_TOKEN_RATIO
   ) {
-    const reason = 'This document appears to be a structured form or contains primarily non-text content. Form documents cannot be reliably translated as the layout carries meaning that cannot be preserved. Please contact us if you believe this is an error.';
+    const reason = 'This document appears to be a structured form or contains primarily non-text content. Form documents cannot be reliably translated as the layout carries meaning that cannot be preserved.';
     console.log(`[PREFLIGHT_DECLINE] method=${extractionMethod} textToSizeRatio=${textToSizeRatio.toFixed(4)} shortTokenRatio=${shortTokenRatio.toFixed(2)} file=${filename}`);
     return { decision: 'decline', reason, signals };
   }
@@ -88,7 +88,7 @@ function preflightCheck(assessment, filename) {
     shortTokenRatio !== null &&
     shortTokenRatio > THRESHOLDS.HIGH_SHORT_TOKEN_RATIO
   ) {
-    const reason = 'This document appears to be a scanned form. Form documents cannot be reliably translated as the layout carries meaning that cannot be preserved in translation. Please contact us if you believe this is an error.';
+    const reason = 'This document appears to be a scanned form. Form documents cannot be reliably translated as the layout carries meaning that cannot be preserved in translation.';
     console.log(`[PREFLIGHT_DECLINE] method=scanned shortTokenRatio=${shortTokenRatio.toFixed(2)} file=${filename}`);
     return { decision: 'decline', reason, signals };
   }
