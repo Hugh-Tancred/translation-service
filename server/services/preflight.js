@@ -71,10 +71,15 @@ function preflightCheck(assessment, filename) {
     return { decision: 'proceed', reason: null, signals };
   }
 
-  // PDF: near-empty text extraction — almost certainly image or form
-  if (textToSizeRatio !== null && textToSizeRatio < THRESHOLDS.VERY_LOW_TEXT_RATIO) {
+  // PDF: near-empty text extraction with form-like token pattern
+  if (
+    textToSizeRatio !== null &&
+    textToSizeRatio < THRESHOLDS.VERY_LOW_TEXT_RATIO &&
+    shortTokenRatio !== null &&
+    shortTokenRatio > THRESHOLDS.HIGH_SHORT_TOKEN_RATIO
+  ) {
     const reason = 'This document contains very little extractable text. It may be a scanned image, a structured form, or a design-heavy document that cannot be reliably translated.';
-    console.log(`[PREFLIGHT_DECLINE] method=${extractionMethod} textToSizeRatio=${textToSizeRatio.toFixed(4)} file=${filename}`);
+    console.log(`[PREFLIGHT_DECLINE] method=${extractionMethod} textToSizeRatio=${textToSizeRatio.toFixed(4)} shortTokenRatio=${shortTokenRatio.toFixed(2)} file=${filename}`);
     return { decision: 'decline', reason, signals };
   }
 
@@ -87,17 +92,6 @@ function preflightCheck(assessment, filename) {
   ) {
     const reason = 'This document appears to be a structured form or contains primarily non-text content. Form documents cannot be reliably translated as the layout carries meaning that cannot be preserved.';
     console.log(`[PREFLIGHT_DECLINE] method=${extractionMethod} textToSizeRatio=${textToSizeRatio.toFixed(4)} shortTokenRatio=${shortTokenRatio.toFixed(2)} file=${filename}`);
-    return { decision: 'decline', reason, signals };
-  }
-
-  // Scanned PDF with high short-token ratio (OCR of a form)
-  if (
-    extractionMethod === 'scanned' &&
-    shortTokenRatio !== null &&
-    shortTokenRatio > THRESHOLDS.HIGH_SHORT_TOKEN_RATIO
-  ) {
-    const reason = 'This document appears to be a scanned form. Form documents cannot be reliably translated as the layout carries meaning that cannot be preserved in translation.';
-    console.log(`[PREFLIGHT_DECLINE] method=scanned shortTokenRatio=${shortTokenRatio.toFixed(2)} file=${filename}`);
     return { decision: 'decline', reason, signals };
   }
 
