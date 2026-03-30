@@ -106,6 +106,13 @@ function preflightCheck(assessment, filename) {
     return { decision: 'flag', reason, signals };
   }
 
+// Scanned PDF — warn that visual layout will not be preserved
+if (extractionMethod === 'scanned') {
+  const reason = 'This is a scanned document. The text will be extracted and translated, but images, stamps, signatures, and visual layout will not appear in the translation.';
+  console.log(`[PREFLIGHT_FLAG] method=scanned textToSizeRatio=${textToSizeRatio !== null ? textToSizeRatio.toFixed(4) : 'null'} file=${filename}`);
+  return { decision: 'flag', reason, signals };
+}
+
   // All checks passed
   console.log(`[PREFLIGHT_PROCEED] method=${extractionMethod} textToSizeRatio=${textToSizeRatio !== null ? textToSizeRatio.toFixed(4) : 'null'} shortTokenRatio=${shortTokenRatio !== null ? shortTokenRatio.toFixed(2) : 'null'} file=${filename}`);
   return { decision: 'proceed', reason: null, signals };
