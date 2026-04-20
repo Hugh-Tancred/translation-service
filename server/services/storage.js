@@ -20,8 +20,13 @@ async function uploadFile(key, buffer, contentType = 'application/pdf') {
     ContentType: contentType
   });
 
-  await s3Client.send(command);
-  return key;
+  try {
+    await s3Client.send(command);
+    return key;
+  } catch (err) {
+    console.error('[S3_UPLOAD_ERROR] name=' + err.name + ' message=' + err.message + ' code=' + err.$metadata?.httpStatusCode);
+    throw err;
+  }
 }
 
 async function downloadFile(key) {
