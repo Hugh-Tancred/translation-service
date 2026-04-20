@@ -1,4 +1,5 @@
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+console.log('[S3_INIT] region=' + process.env.AWS_REGION + ' keyId=' + (process.env.AWS_ACCESS_KEY_ID || 'MISSING').substring(0, 8) + '...');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 const s3Client = new S3Client({
