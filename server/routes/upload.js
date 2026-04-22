@@ -86,7 +86,7 @@ router.post('/', upload.single('document'), async (req, res) => {
     });
   } catch (error) {
     // [MONITORING] Upload failure — file, email, S3, assessment or DB error
-    console.error(`[UPLOAD_FAIL] file=${req.file ? req.file.originalname : 'none'} error=${error.message}`);
+    console.error(`[UPLOAD_FAIL] file=${req.file ? req.file.originalname : 'none'} error=${error.message} stack=${error.stack}`);
 
     if (error.message === 'Only PDF files are allowed') {
       return res.status(400).json({ error: error.message });
