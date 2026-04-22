@@ -14,6 +14,7 @@ const s3Client = new S3Client({
 const BUCKET_NAME = process.env.S3_BUCKET_NAME;
 
 async function uploadFile(key, buffer, contentType = 'application/pdf') {
+  console.log('[S3_UPLOAD_ATTEMPT] key=' + key + ' endpoint=' + process.env.AWS_ENDPOINT_URL);
   const command = new PutObjectCommand({
     Bucket: BUCKET_NAME,
     Key: key,
