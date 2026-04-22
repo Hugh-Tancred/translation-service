@@ -3,7 +3,7 @@ console.log('[S3_INIT] region=' + process.env.AWS_REGION + ' keyId=' + (process.
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 const s3Client = new S3Client({
-  region: 'auto',
+  region: 'us-east-1',
   endpoint: process.env.AWS_ENDPOINT_URL,
   forcePathStyle: true,
   credentials: {
