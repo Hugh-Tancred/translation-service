@@ -1,6 +1,6 @@
-const sgMail = require('@sendgrid/mail');
+const { Resend } = require('resend');
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL;
 const BASE_URL = process.env.BASE_URL;
@@ -8,7 +8,7 @@ const BASE_URL = process.env.BASE_URL;
 async function sendQuoteEmail(order) {
   const quoteUrl = `${BASE_URL}/quote.html?id=${order.id}`;
 
-  const msg = {
+  await resend.emails.send({
     to: order.email,
     from: FROM_EMAIL,
     subject: 'Your Translation Quote - €10.00',
@@ -31,13 +31,11 @@ async function sendQuoteEmail(order) {
         AI translations may contain errors. Please review the translated document carefully.
       </p>
     `
-  };
-
-  await sgMail.send(msg);
+  });
 }
 
 async function sendDeliveryEmail(order, downloadUrl) {
-  const msg = {
+  await resend.emails.send({
     to: order.email,
     from: FROM_EMAIL,
     subject: 'Your Translated Document is Ready',
@@ -63,9 +61,7 @@ async function sendDeliveryEmail(order, downloadUrl) {
         especially for legal, medical, or other critical documents.
       </p>
     `
-  };
-
-  await sgMail.send(msg);
+  });
 }
 
 module.exports = { sendQuoteEmail, sendDeliveryEmail };
